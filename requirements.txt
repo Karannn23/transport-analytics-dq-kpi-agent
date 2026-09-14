@@ -1,0 +1,5 @@
+flask
+databricks-sql-connector
+python-dotenv
+requests
+cryptography

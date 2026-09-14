@@ -1,0 +1,20 @@
+# Environment / secrets
+.env
+*.pem
+*credentials*
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+.pytest_cache/
+venv/
+.venv/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Editor
+.vscode/
+.idea/

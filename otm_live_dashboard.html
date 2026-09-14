@@ -1,0 +1,1585 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Transport Analytics Transport Analytics — Live Data Quality Dashboard</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: -apple-system, "Segoe UI", system-ui, sans-serif; font-size: 13px; line-height: 1.5; background: #f0f2f5; color: #1f2328; }
+
+  .header { background: #1f2328; color: #fff; padding: 14px 28px; display: flex; align-items: center; justify-content: space-between; }
+  .header-left { display: flex; align-items: center; gap: 14px; }
+  .header-logo { width: 36px; height: 36px; background: #3b82d4; border-radius: 6px; display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 14px; color: #fff; flex-shrink: 0; }
+  .header-title { font-size: 15px; font-weight: 700; }
+  .header-sub   { font-size: 11px; color: #9ca3af; margin-top: 1px; }
+  .header-right { text-align: right; font-size: 11px; color: #9ca3af; display: flex; align-items: center; gap: 12px; }
+  .header-right strong { color: #fff; display: block; font-size: 13px; }
+  .header-counts { text-align: right; }
+
+  .refresh-btn { background: #3b82d4; color: #fff; border: none; border-radius: 6px; padding: 6px 14px; font-size: 12px; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 6px; }
+  .refresh-btn:hover { background: #2563be; }
+  .refresh-btn:disabled { background: #374151; color: #9ca3af; cursor: not-allowed; }
+  .spin { display: inline-block; animation: spin 1s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  .page { max-width: 920px; margin: 0 auto; padding: 20px 16px 48px; }
+
+  .filter-bar { display: flex; align-items: center; gap: 10px; background: #fff; border: 1px solid #e5e7eb; border-radius: 7px; padding: 10px 16px; margin-bottom: 18px; flex-wrap: wrap; }
+  .flabel { font-size: 11px; font-weight: 700; color: #57606a; text-transform: uppercase; letter-spacing: 0.4px; margin-right: 2px; }
+  .filter-pill { font-size: 11px; font-weight: 600; padding: 3px 11px; border-radius: 12px; border: 1px solid #e5e7eb; background: #f7f8fa; color: #57606a; cursor: pointer; }
+  .filter-pill.date { background: #eff6ff; color: #1d4ed8; border-color: #bfdbfe; cursor: default; }
+  .filter-pill.active { background: #1f2328; color: #fff; border-color: #1f2328; }
+  .spacer { flex: 1; }
+  .live-badge { font-size: 11px; font-weight: 700; }
+  .live-badge.green { color: #15803d; }
+  .live-badge.loading { color: #b45309; }
+  .live-badge.error { color: #b91c1c; }
+
+  .score-row { display: grid; grid-template-columns: 200px 1fr; gap: 14px; margin-bottom: 18px; }
+  .overall-card { background: #1f2328; color: #fff; border-radius: 8px; padding: 18px 20px; display: flex; flex-direction: column; justify-content: center; }
+  .oc-label { font-size: 11px; color: #9ca3af; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 6px; display: flex; align-items: center; gap: 6px; }
+  .oc-score { font-size: 46px; font-weight: 800; line-height: 1; }
+  .oc-sub   { font-size: 11px; color: #9ca3af; margin-top: 6px; }
+  .oc-src   { font-size: 10px; color: #6b7280; margin-top: 4px; }
+  .pillar-note { font-size: 10px; color: #4b5563; margin-top: 6px; font-style: italic; }
+  .tooltip-wrap { position: relative; display: inline-block; cursor: help; }
+  .tooltip-wrap .tooltip-box {
+    display: none; position: absolute; bottom: calc(100% + 8px); left: 0;
+    background: #374151; color: #e5e7eb; font-size: 11px; line-height: 1.7;
+    padding: 11px 14px; border-radius: 7px; width: 272px; z-index: 200;
+    box-shadow: 0 4px 18px rgba(0,0,0,0.4); white-space: normal;
+  }
+  .tooltip-wrap .tooltip-box::after {
+    content: ''; position: absolute; top: 100%; left: 16px;
+    border: 6px solid transparent; border-top-color: #374151;
+  }
+  .tooltip-wrap:hover .tooltip-box { display: block; }
+  .tooltip-icon { font-size: 10px; color: #9ca3af; border-bottom: 1px dashed #6b7280; padding-bottom: 1px; letter-spacing: 0; text-transform: none; }
+
+  .pillar-scores { display: grid; grid-template-columns: repeat(5, 1fr); gap: 10px; }
+  .ps-card { background: #fff; border-radius: 8px; border: 1px solid #e5e7eb; padding: 13px 12px; text-align: center; }
+  .ps-val  { font-size: 26px; font-weight: 800; line-height: 1.1; }
+  .ps-name { font-size: 10px; color: #57606a; margin-top: 3px; line-height: 1.3; }
+  .ps-bar  { height: 4px; border-radius: 2px; margin-top: 8px; background: #e5e7eb; }
+  .ps-fill { height: 4px; border-radius: 2px; transition: width 0.6s ease; }
+
+  .c-green  { color: #15803d; } .c-amber { color: #b45309; } .c-red { color: #b91c1c; } .c-purple { color: #7c5cd8; }
+  .bg-green { background: #22c55e; } .bg-amber { background: #f59e0b; } .bg-red { background: #ef4444; } .bg-purple { background: #7c5cd8; }
+
+  .skeleton { background: linear-gradient(90deg, #e5e7eb 25%, #f3f4f6 50%, #e5e7eb 75%); background-size: 200% 100%; animation: shimmer 1.4s infinite; border-radius: 4px; }
+  /* Drill-down modal — flex layout only when open so the browser's native
+     display:none for closed <dialog> is not overridden by an inline style */
+  #drilldown-modal[open] { display: flex; flex-direction: column; }
+  #drilldown-modal::backdrop { background: rgba(0,0,0,0.45); }
+  @keyframes shimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
+
+  .entity-health { background: #fff; border: 1px solid #e5e7eb; border-radius: 8px; padding: 14px 16px; margin-bottom: 18px; }
+  .entity-health h4 { font-size: 12px; font-weight: 700; margin-bottom: 12px; }
+  .eh-row { display: flex; align-items: center; gap: 10px; margin-bottom: 9px; }
+  .eh-name { width: 130px; font-size: 11.5px; font-weight: 600; flex-shrink: 0; }
+  .eh-bar-bg { flex: 1; height: 10px; background: #f3f4f6; border-radius: 5px; overflow: hidden; }
+  .eh-bar-fill { height: 10px; border-radius: 5px; transition: width 0.6s ease; }
+  .eh-val { width: 42px; text-align: right; font-size: 12px; font-weight: 700; flex-shrink: 0; }
+  .eh-rag { width: 56px; flex-shrink: 0; }
+
+  .sec-label { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.6px; color: #57606a; margin: 20px 0 8px; display: flex; align-items: center; gap: 8px; }
+  .sec-label::after { content:''; flex:1; height:1px; background:#e5e7eb; }
+
+  .kpi-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 4px; }
+  .kpi-card { background: #fff; border: 1px solid #e5e7eb; border-radius: 8px; padding: 13px 14px; position: relative; overflow: hidden; transition: box-shadow 0.3s ease, border-color 0.3s ease; }
+  .kpi-card::before { content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 4px; border-radius: 8px 0 0 8px; }
+  .kpi-card.green::before { background: #22c55e; }
+  .kpi-card.amber::before { background: #f59e0b; }
+  .kpi-card.red::before   { background: #ef4444; }
+  .kpi-card.purple::before{ background: #7c5cd8; }
+  @keyframes kpi-pulse { 0% { box-shadow: 0 0 0 0 rgba(59,130,212,0.7); border-color: #3b82d4; } 50% { box-shadow: 0 0 0 8px rgba(59,130,212,0.0); border-color: #3b82d4; } 100% { box-shadow: 0 0 0 0 rgba(59,130,212,0); border-color: #e5e7eb; } }
+  .kpi-card.ai-highlight { animation: kpi-pulse 1.2s ease 3; border-color: #3b82d4; }
+  .kpi-card.ai-fixed { border-color: #22c55e !important; box-shadow: 0 0 0 3px rgba(34,197,94,0.2) !important; }
+  .persona-badge { display: inline-flex; align-items: center; gap: 3px; font-size: 9px; font-weight: 600; padding: 1px 6px 1px 4px; border-radius: 8px; margin-bottom: 5px; white-space: nowrap; }
+  .persona-de  { background: #eff6ff; color: #1d4ed8; border: 1px solid #bfdbfe; }
+  .persona-ds  { background: #f0fdf4; color: #15803d; border: 1px solid #bbf7d0; }
+  .persona-lp  { background: #fff7ed; color: #c2410c; border: 1px solid #fed7aa; }
+  .persona-sc  { background: #fdf4ff; color: #7c3aed; border: 1px solid #e9d5ff; }
+  .persona-fa  { background: #fefce8; color: #a16207; border: 1px solid #fde68a; }
+  .persona-ops { background: #fef2f2; color: #b91c1c; border: 1px solid #fecaca; }
+
+  .kc-top  { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 6px; }
+  .kc-name { font-size: 11.5px; font-weight: 600; color: #1f2328; line-height: 1.3; max-width: 150px; }
+  .kc-id   { font-size: 10px; color: #9ca3af; font-family: "Consolas","Courier New",monospace; }
+  .kc-val  { font-size: 28px; font-weight: 800; line-height: 1; }
+  .kc-meta { display: flex; justify-content: space-between; align-items: center; margin-top: 7px; }
+  .kc-tgt  { font-size: 10px; color: #57606a; }
+  .kc-rag  { font-size: 10px; font-weight: 700; padding: 2px 7px; border-radius: 8px; text-transform: uppercase; }
+  .rag-green  { background: #dcfce7; color: #15803d; }
+  .rag-amber  { background: #fef9c3; color: #b45309; }
+  .rag-red    { background: #fee2e2; color: #b91c1c; }
+  .rag-purple { background: #ede9fe; color: #7c5cd8; }
+
+  .ghost-spotlight { background: #fdf4ff; border: 1.5px solid #c4b5fd; border-radius: 8px; padding: 14px 16px; margin-bottom: 4px; display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; align-items: center; }
+  .gs-id   { font-size: 10px; font-family: "Consolas","Courier New",monospace; color: #9ca3af; }
+  .gs-name { font-size: 13px; font-weight: 700; color: #5b21b6; margin: 3px 0 5px; }
+  .gs-val  { font-size: 40px; font-weight: 800; color: #7c5cd8; line-height: 1; }
+  .gs-tgt  { font-size: 11px; color: #57606a; margin-top: 4px; }
+  .gs-detail { font-size: 11.5px; color: #1f2328; border-left: 2px solid #c4b5fd; padding-left: 12px; }
+  .gs-detail ul { padding-left: 14px; }
+  .gs-detail li { margin-bottom: 3px; }
+  .gs-actions { text-align: right; }
+  .gs-badge { display: inline-block; background: #7c5cd8; color: #fff; font-size: 10px; font-weight: 700; padding: 3px 9px; border-radius: 9px; margin-bottom: 8px; }
+  .gs-rem { font-size: 11px; color: #57606a; line-height: 1.5; }
+
+  .stat-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 18px; }
+  .stat-card { background: #fff; border: 1px solid #e5e7eb; border-radius: 8px; padding: 14px 16px; }
+  .stat-card h4 { font-size: 11px; font-weight: 700; color: #57606a; text-transform: uppercase; letter-spacing: 0.4px; margin-bottom: 10px; }
+  .stat-row { display: flex; justify-content: space-between; align-items: center; padding: 3px 0; font-size: 12px; border-bottom: 1px solid #f3f4f6; }
+  .stat-row:last-child { border-bottom: none; }
+  .stat-val { font-weight: 700; }
+
+  .dq-bar-section { background: #fff; border: 1px solid #e5e7eb; border-radius: 8px; padding: 14px 16px; margin-bottom: 18px; }
+  .dq-bar-section h4 { font-size: 12px; font-weight: 700; margin-bottom: 12px; }
+  .dq-tab-btn { font-size: 10px; font-weight: 600; padding: 3px 9px; border-radius: 10px; border: 1px solid #e5e7eb; background: #f7f8fa; color: #57606a; cursor: pointer; }
+  .dq-tab-btn.active { background: #1f2328; color: #fff; border-color: #1f2328; }
+  .dq-tab-btn:hover:not(.active) { background: #e5e7eb; }
+  .kc-delta { font-size: 10px; font-weight: 600; margin-top: 3px; }
+  .kc-delta.up { color: #15803d; }
+  .kc-delta.down { color: #b91c1c; }
+  .kc-delta.same { color: #9ca3af; }
+  .dq-bar-row { display: flex; align-items: center; gap: 10px; margin-bottom: 7px; font-size: 11.5px; }
+  .dq-bar-label { width: 200px; flex-shrink: 0; }
+  .dq-bar-bg { flex: 1; height: 10px; background: #f3f4f6; border-radius: 5px; overflow: hidden; }
+  .dq-bar-fill { height: 10px; border-radius: 5px; transition: width 0.6s ease; }
+  .dq-bar-cnt { width: 36px; text-align: right; font-weight: 700; font-size: 12px; flex-shrink: 0; }
+
+  .error-banner { background: #fee2e2; border: 1px solid #fca5a5; color: #b91c1c; border-radius: 8px; padding: 14px 16px; margin-bottom: 18px; font-size: 12px; }
+
+  .kpi-summary-table { background: #fff; border: 1px solid #e5e7eb; border-radius: 8px; overflow: hidden; margin-bottom: 18px; }
+  .kpi-summary-table table { width: 100%; border-collapse: collapse; font-size: 11.5px; }
+  .kpi-summary-table th { padding: 7px 10px; text-align: left; font-weight: 600; color: #57606a; border-bottom: 1px solid #e5e7eb; background: #f7f8fa; }
+  .kpi-summary-table td { padding: 6px 10px; border-bottom: 1px solid #f0f0f0; }
+  .kpi-summary-table tr:last-child td { border-bottom: none; }
+  .mono { font-family: "Consolas","Courier New",monospace; font-size: 10.5px; color: #3b82d4; }
+
+  /* ── Trend / Sparkline section ─────────────────────────────────────── */
+  .trend-section { margin-bottom: 18px; }
+  .sparkline-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 12px; }
+  .spark-card { background: #fff; border: 1px solid #e5e7eb; border-radius: 8px; padding: 11px 13px; }
+  .spark-card-label { font-size: 10px; font-weight: 700; color: #57606a; text-transform: uppercase; letter-spacing: 0.4px; margin-bottom: 4px; }
+  .spark-card-val { font-size: 18px; font-weight: 800; margin-bottom: 3px; }
+  .spark-card svg { display: block; width: 100%; }
+  .spark-card .spark-delta { font-size: 10px; font-weight: 600; margin-top: 3px; }
+  .spark-card .spark-delta.up { color: #15803d; }
+  .spark-card .spark-delta.down { color: #b91c1c; }
+  .spark-card .spark-delta.same { color: #9ca3af; }
+  .history-table { width: 100%; border-collapse: collapse; font-size: 11.5px; }
+  .history-table th { padding: 6px 10px; text-align: left; font-weight: 600; color: #57606a; border-bottom: 1px solid #e5e7eb; background: #f7f8fa; }
+  .history-table td { padding: 5px 10px; border-bottom: 1px solid #f3f4f6; }
+  .history-table tr:last-child td { border-bottom: none; }
+  .history-table tr.today td { font-weight: 700; background: #eff6ff; }
+  .trend-notice { background: #fef9c3; border: 1px solid #fde68a; color: #92400e; border-radius: 7px; padding: 10px 14px; font-size: 11.5px; }
+
+  footer { margin-top: 32px; border-top: 1px solid #e5e7eb; padding-top: 10px; text-align: center; font-size: 11px; color: #9ca3af; }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="header-left">
+    <div class="header-logo">OTM</div>
+    <div>
+      <div class="header-title">Transport Analytics — Data Quality Dashboard</div>
+      <div class="header-sub">Transport Analytics · Live Data · workspace.Transport Analytics · Databricks</div>
+    </div>
+  </div>
+  <div class="header-right">
+    <div class="header-counts">
+      <strong>workspace.Transport Analytics (Databricks)</strong>
+      <span id="hdr-counts">Loading…</span>
+    </div>
+    <button class="refresh-btn" id="refresh-btn" onclick="recomputeKpis()">
+      <span id="refresh-icon">&#8635;</span> Re-compute KPIs
+    </button>
+  </div>
+</div>
+<div style="height:3px;background:#e5e7eb"></div>
+
+<div class="page">
+
+  <div id="error-banner" style="display:none" class="error-banner"></div>
+
+  <div class="filter-bar">
+    <span class="flabel">Source</span>
+    <span class="filter-pill date">workspace.Transport Analytics</span>
+    <span class="flabel" style="margin-left:8px">Entity</span>
+    <span class="filter-pill active" id="fpill-all" onclick="filterEntity('all')">All</span>
+    <span class="filter-pill" id="fpill-order" onclick="filterEntity('order')">ORDER</span>
+    <span class="filter-pill" id="fpill-os" onclick="filterEntity('os')">ORDER_SHIPMENT</span>
+    <span class="filter-pill" id="fpill-shipment" onclick="filterEntity('shipment')">SHIPMENT</span>
+    <div class="spacer"></div>
+    <span class="live-badge loading" id="live-badge">&#9679; Connecting…</span>
+  </div>
+
+  <!-- ── AI Executive Summary Panel ──────────────────────────────────────── -->
+  <div id="ai-summary-panel" style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:8px;padding:13px 16px;margin-bottom:18px;display:flex;align-items:flex-start;gap:12px">
+    <div style="flex-shrink:0;width:28px;height:28px;background:#3b82d4;border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:13px;color:#fff;font-weight:800">AI</div>
+    <div style="flex:1">
+      <div style="font-size:10px;font-weight:700;color:#1d4ed8;text-transform:uppercase;letter-spacing:0.4px;margin-bottom:4px">AI Executive Summary <span style="font-weight:400;color:#60a5fa">— powered by IBM Bob</span></div>
+      <div id="ai-summary-text" style="font-size:12.5px;color:#1f2328;line-height:1.6"><span class="skeleton" style="height:14px;width:80%;display:block;border-radius:3px;margin-bottom:6px"></span><span class="skeleton" style="height:14px;width:60%;display:block;border-radius:3px"></span></div>
+    </div>
+    <button onclick="regenerateSummary()" style="background:#3b82d4;color:#fff;border:none;border-radius:5px;padding:5px 12px;font-size:11px;cursor:pointer;flex-shrink:0;white-space:nowrap" id="summary-btn">Regenerate</button>
+  </div>
+
+  <div class="score-row">
+    <div class="overall-card">
+      <div class="oc-label">
+        Overall DQ Score
+        <span class="tooltip-wrap">
+          <span class="tooltip-icon">&#9432; how scored?</span>
+          <div class="tooltip-box">
+            <strong style="color:#fff">How the Overall score is calculated</strong><br/><br/>
+            Each of the <strong>15 KPIs</strong> is scored 0–100 against its target:<br/><br/>
+            <span style="color:#86efac">&#9679;</span> <strong>Meets or beats target</strong> → 100 pts<br/>
+            <span style="color:#fde68a">&#9679;</span> <strong>Misses</strong> (higher-is-better KPI) → actual ÷ target × 100<br/>
+            <span style="color:#fca5a5">&#9679;</span> <strong>Exceeds</strong> (lower-is-better KPI) → 100 − overshoot × 10<br/><br/>
+            <strong>Overall = average of all 15 KPI scores.</strong><br/><br/>
+            <span style="color:#9ca3af">The <em>Pillar scores</em> (Join, Completeness…) use a softer lens — they show the <em>proportion of clean records</em> in each dimension, which is why they appear higher.</span>
+          </div>
+        </span>
+      </div>
+      <div class="oc-score" id="overall-score" style="color:#f59e0b">—</div>
+      <div class="oc-sub">Scored across 15 KPIs · 3 entity layers</div>
+      <div class="oc-src" id="computed-at">Fetching live data…</div>
+      <div class="pillar-note">Pillars = % of clean records per dimension</div>
+    </div>
+    <div class="pillar-scores">
+      <div class="ps-card">
+        <div class="ps-val" id="p-join">—</div>
+        <div class="ps-name">Join Integrity</div>
+        <div class="ps-bar"><div class="ps-fill" id="pf-join" style="width:0%"></div></div>
+      </div>
+      <div class="ps-card">
+        <div class="ps-val" id="p-comp">—</div>
+        <div class="ps-name">Completeness</div>
+        <div class="ps-bar"><div class="ps-fill" id="pf-comp" style="width:0%"></div></div>
+      </div>
+      <div class="ps-card">
+        <div class="ps-val" id="p-cons">—</div>
+        <div class="ps-name">Consistency</div>
+        <div class="ps-bar"><div class="ps-fill" id="pf-cons" style="width:0%"></div></div>
+      </div>
+      <div class="ps-card">
+        <div class="ps-val" id="p-time">—</div>
+        <div class="ps-name">Timeliness</div>
+        <div class="ps-bar"><div class="ps-fill" id="pf-time" style="width:0%"></div></div>
+      </div>
+      <div class="ps-card">
+        <div class="ps-val" id="p-ref">—</div>
+        <div class="ps-name">Referential</div>
+        <div class="ps-bar"><div class="ps-fill" id="pf-ref" style="width:0%"></div></div>
+      </div>
+      <div class="ps-card">
+        <div class="ps-val" id="p-biz">—</div>
+        <div class="ps-name">Business</div>
+        <div class="ps-bar"><div class="ps-fill" id="pf-biz" style="width:0%"></div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Data Quality Trend (7-day sparklines) ─────────────────────────── -->
+  <div class="trend-section" id="trend-section">
+    <div class="sec-label">Data Quality Trend <span style="font-weight:400;color:#9ca3af;font-size:10px">— pre-seeded 7-day history · Post-fix row appended after remediation</span></div>
+    <div id="sparkline-grid-container">
+      <div class="sparkline-grid">
+        <div class="spark-card" id="spark-overall"></div>
+        <div class="spark-card" id="spark-join"></div>
+        <div class="spark-card" id="spark-comp"></div>
+        <div class="spark-card" id="spark-cons"></div>
+        <div class="spark-card" id="spark-time"></div>
+        <div class="spark-card" id="spark-ref"></div>
+      </div>
+    </div>
+    <div class="kpi-summary-table" style="margin-top:8px">
+      <div id="history-table-container"><div class="skeleton" style="height:100px"></div></div>
+    </div>
+  </div>
+
+  <div class="entity-health" data-entity="all">
+    <h4>Entity-Level DQ Health <span style="font-weight:400;color:#57606a;font-size:11px">(computed from live workspace.Transport Analytics data)</span></h4>
+    <div class="eh-row">
+      <div class="eh-name">ORDER</div>
+      <div class="eh-bar-bg"><div class="eh-bar-fill" id="eh-order-bar" style="width:0%"></div></div>
+      <div class="eh-val" id="eh-order-val">—</div>
+      <div class="eh-rag" id="eh-order-rag"></div>
+    </div>
+    <div class="eh-row">
+      <div class="eh-name">ORDER_SHIPMENT</div>
+      <div class="eh-bar-bg"><div class="eh-bar-fill" id="eh-os-bar" style="width:0%"></div></div>
+      <div class="eh-val" id="eh-os-val">—</div>
+      <div class="eh-rag" id="eh-os-rag"></div>
+    </div>
+    <div class="eh-row">
+      <div class="eh-name">SHIPMENT</div>
+      <div class="eh-bar-bg"><div class="eh-bar-fill" id="eh-shp-bar" style="width:0%"></div></div>
+      <div class="eh-val" id="eh-shp-val">—</div>
+      <div class="eh-rag" id="eh-shp-rag"></div>
+    </div>
+  </div>
+
+  <div class="stat-grid" data-entity="all">
+    <div class="stat-card">
+      <h4>ORDER — Status Breakdown</h4>
+      <div id="order-status-breakdown"><div class="skeleton" style="height:80px"></div></div>
+    </div>
+    <div class="stat-card">
+      <h4>ORDER_SHIPMENT — DQ Flags</h4>
+      <div id="os-dq-breakdown"><div class="skeleton" style="height:80px"></div></div>
+    </div>
+    <div class="stat-card">
+      <h4>SHIPMENT — Status Breakdown</h4>
+      <div id="shp-status-breakdown"><div class="skeleton" style="height:80px"></div></div>
+    </div>
+  </div>
+
+  <div class="sec-label" id="sec-join" data-entity="order os shipment">Join Integrity</div>
+  <div class="kpi-grid" id="kpi-join" data-entity="order os shipment" style="margin-bottom:10px">
+    <div class="kpi-card"><div class="skeleton" style="height:80px"></div></div>
+    <div class="kpi-card"><div class="skeleton" style="height:80px"></div></div>
+    <div class="kpi-card"><div class="skeleton" style="height:80px"></div></div>
+  </div>
+
+  <div class="sec-label" id="sec-comp" data-entity="order shipment">Completeness</div>
+  <div class="kpi-grid" id="kpi-comp" data-entity="order shipment">
+    <div class="kpi-card"><div class="skeleton" style="height:80px"></div></div>
+    <div class="kpi-card"><div class="skeleton" style="height:80px"></div></div>
+    <div class="kpi-card"><div class="skeleton" style="height:80px"></div></div>
+  </div>
+
+  <div class="sec-label" id="sec-cons" data-entity="order os shipment">Consistency</div>
+  <div class="ghost-spotlight" data-entity="order os shipment">
+    <div>
+      <div class="gs-id">CS-07 · CONSISTENCY</div>
+      <div class="gs-name">Stale-Delete Ghost Mapping Rate</div>
+      <div class="gs-val" id="ghost-val">—</div>
+      <div class="gs-tgt">Target = 0% &nbsp;·&nbsp; <strong id="ghost-status" style="color:#b91c1c">Loading…</strong></div>
+    </div>
+    <div class="gs-detail">
+      <strong style="font-size:12px;color:#5b21b6">Live Impact (workspace.Transport Analytics)</strong>
+      <ul>
+        <li><span id="ghost-count">—</span> orders mapped to 2+ active shipment GIDs</li>
+        <li>Transport Analytics delete events not propagated to lake</li>
+        <li>Ghost shipments stuck in "Planned" status</li>
+        <li>Weight double-counted in volume reports</li>
+        <li>OTD calculations corrupted for affected orders</li>
+      </ul>
+    </div>
+    <div class="gs-actions">
+      <div class="gs-badge">&#9733; Critical KPI</div>
+      <div class="gs-rem">
+        <strong style="color:#5b21b6">Remediation:</strong><br/>
+        Replay CDC delete events<br/>
+        Add <code>is_deleted</code> flag to lake<br/>
+        ETL dedup guard on OS table
+      </div>
+    </div>
+  </div>
+
+  <div class="kpi-grid" id="kpi-cons" data-entity="order os shipment" style="margin-top:10px">
+    <div class="kpi-card"><div class="skeleton" style="height:80px"></div></div>
+    <div class="kpi-card"><div class="skeleton" style="height:80px"></div></div>
+    <div class="kpi-card"><div class="skeleton" style="height:80px"></div></div>
+  </div>
+
+  <div class="sec-label" id="sec-ref" data-entity="order shipment">Referential Integrity &amp; Conformity</div>
+  <div class="kpi-grid" id="kpi-ref" data-entity="order shipment">
+    <div class="kpi-card"><div class="skeleton" style="height:80px"></div></div>
+    <div class="kpi-card"><div class="skeleton" style="height:80px"></div></div>
+    <div class="kpi-card"><div class="skeleton" style="height:80px"></div></div>
+  </div>
+
+  <div class="sec-label" id="sec-time" data-entity="shipment">Timeliness</div>
+  <div class="kpi-grid" id="kpi-time" data-entity="shipment">
+    <div class="kpi-card"><div class="skeleton" style="height:80px"></div></div>
+  </div>
+
+  <div class="sec-label" id="sec-biz" data-entity="all">Business Performance</div>
+  <div class="kpi-grid" id="kpi-biz" data-entity="all">
+    <div class="kpi-card"><div class="skeleton" style="height:80px"></div></div>
+    <div class="kpi-card"><div class="skeleton" style="height:80px"></div></div>
+    <div class="kpi-card"><div class="skeleton" style="height:80px"></div></div>
+  </div>
+
+  <!-- ── Drill-down modal ─────────────────────────────────────────────────── -->
+  <!-- Draggable, centred, closable via X button / Escape / clicking outside -->
+  <dialog id="drilldown-modal" style="
+    border:none; border-radius:10px; padding:0; width:720px; max-width:95vw;
+    box-shadow:0 8px 40px rgba(0,0,0,0.28); font-family:-apple-system,'Segoe UI',system-ui,sans-serif;
+    max-height:82vh; overflow:hidden;
+    position:fixed; margin:auto; top:0; left:0; right:0; bottom:0;">
+    <div id="modal-drag-handle" style="background:#1f2328;color:#fff;padding:14px 18px;display:flex;align-items:center;justify-content:space-between;flex-shrink:0;cursor:grab;border-radius:10px 10px 0 0">
+      <div>
+        <div style="font-size:13px;font-weight:700" id="modal-title">Drill-Down</div>
+        <div style="font-size:10px;color:#9ca3af" id="modal-subtitle"></div>
+      </div>
+      <div style="display:flex;gap:8px;align-items:center">
+        <button onclick="copyModalCsv()" style="background:#374151;color:#fff;border:none;border-radius:5px;padding:5px 12px;font-size:11px;cursor:pointer" title="Download table as CSV">Copy CSV</button>
+        <button onclick="closeModal()" style="background:transparent;border:none;color:#9ca3af;font-size:20px;cursor:pointer;line-height:1;padding:0 2px" title="Close (Escape)">&#10005;</button>
+      </div>
+    </div>
+    <div id="modal-body" style="overflow-y:auto;padding:14px 18px;flex:1">
+      <div class="skeleton" style="height:120px"></div>
+    </div>
+  </dialog>
+
+  <div class="sec-label" data-entity="all order os shipment">DQ Flag Distribution</div>
+  <div class="dq-bar-section" data-entity="all order os shipment">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+      <h4 id="dq-bar-title" style="margin-bottom:0">DQ Flag Breakdown</h4>
+      <div style="display:flex;gap:6px">
+        <button class="dq-tab-btn" id="dq-tab-order" onclick="showDqTab('order')">ORDER</button>
+        <button class="dq-tab-btn" id="dq-tab-os" onclick="showDqTab('os')">ORDER_SHIPMENT</button>
+        <button class="dq-tab-btn active" id="dq-tab-shp" onclick="showDqTab('shp')">SHIPMENT</button>
+      </div>
+    </div>
+    <div id="dq-bar-rows"><div class="skeleton" style="height:120px"></div></div>
+  </div>
+
+  <!-- ── Live Alerts Panel ─────────────────────────────────────────────────── -->
+  <div class="sec-label" data-entity="all order os shipment">AI Alerts <span style="font-weight:400;color:#9ca3af;font-size:10px">— generated by Monitor Agent · workspace.otm.dq_alerts</span></div>
+  <div data-entity="all order os shipment" style="background:#fff;border:1px solid #e5e7eb;border-radius:8px;padding:14px 16px;margin-bottom:18px">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+      <div style="font-size:11px;color:#57606a" id="alerts-meta">Run the Monitor Agent to generate alerts from live KPI data.</div>
+      <button onclick="runMonitorAgent()" id="monitor-btn" style="background:#1f2328;color:#fff;border:none;border-radius:6px;padding:6px 14px;font-size:11px;font-weight:600;cursor:pointer;display:flex;align-items:center;gap:6px">
+        <span id="monitor-icon">&#9655;</span> Run Monitor Agent
+      </button>
+    </div>
+    <div id="alerts-container">
+      <div style="font-size:11.5px;color:#9ca3af;padding:10px 0">No alerts yet — click "Run Monitor Agent" to scan KPIs with IBM Bob.</div>
+    </div>
+  </div>
+
+  <div class="sec-label" data-entity="all order os shipment">KPI Computation Summary — Live Values</div>
+  <div class="kpi-summary-table" id="kpi-summary-table" data-entity="all order os shipment">
+    <div class="skeleton" style="height:200px"></div>
+  </div>
+
+</div>
+
+<!-- ── Ask the Data Agent chat panel ─────────────────────────────────────── -->
+<button id="chat-toggle-btn" onclick="toggleChat()" title="Ask the Data Agent" style="
+  position:fixed; bottom:24px; right:24px; z-index:1000;
+  background:#1f2328; color:#fff; border:none; border-radius:50%;
+  width:48px; height:48px; font-size:20px; cursor:pointer;
+  box-shadow:0 4px 12px rgba(0,0,0,0.25); display:flex;
+  align-items:center; justify-content:center;">&#128172;</button>
+
+<div id="chat-panel" style="
+  display:none; position:fixed; bottom:84px; right:24px; z-index:999;
+  width:340px; background:#fff; border:1px solid #e5e7eb; border-radius:10px;
+  box-shadow:0 8px 32px rgba(0,0,0,0.15); font-family:-apple-system,'Segoe UI',system-ui,sans-serif;
+  overflow:hidden; flex-direction:column;">
+  <div style="background:#1f2328;color:#fff;padding:10px 14px;display:flex;align-items:center;justify-content:space-between">
+    <div>
+      <div style="font-size:12px;font-weight:700">Ask the Data Agent</div>
+      <div style="font-size:10px;color:#9ca3af">Powered by IBM Bob</div>
+    </div>
+    <button onclick="toggleChat()" style="background:transparent;border:none;color:#9ca3af;font-size:16px;cursor:pointer">&#10005;</button>
+  </div>
+  <div id="chat-messages" style="height:260px;overflow-y:auto;padding:10px 12px;display:flex;flex-direction:column;gap:8px">
+    <div style="background:#eff6ff;border-radius:8px;padding:8px 10px;font-size:11.5px;color:#1f2328">
+      Hi! Ask me anything about the Transport Analytics Data Quality metrics — e.g. <em>"What is causing the ghost mapping issue?"</em> or <em>"What improved after the fix?"</em>
+    </div>
+  </div>
+  <div style="padding:8px 12px;border-top:1px solid #e5e7eb;display:flex;gap:6px">
+    <input id="chat-input" type="text" placeholder="Ask a question…"
+      style="flex:1;border:1px solid #e5e7eb;border-radius:6px;padding:6px 10px;font-size:12px;outline:none"
+      onkeydown="if(event.key==='Enter')sendChat()"/>
+    <button onclick="sendChat()" style="background:#3b82d4;color:#fff;border:none;border-radius:6px;padding:6px 12px;font-size:11px;cursor:pointer">Send</button>
+  </div>
+</div>
+
+<footer>Made with IBM Bob</footer>
+
+<script>
+  // ── Helpers ────────────────────────────────────────────────────────────────
+
+  function rag(value, kpi) {
+    const { target_val, higher_is_better } = kpi;
+    if (higher_is_better) {
+      if (value >= target_val) return 'green';
+      if (value >= target_val * 0.95) return 'amber';
+      return 'red';
+    } else {
+      if (value === 0 && target_val === 0) return 'green';
+      if (value <= target_val) return 'green';
+      if (value <= target_val * 2) return 'amber';
+      return 'red';
+    }
+  }
+
+  function ragLabel(r) {
+    const map = { green: 'GREEN', amber: 'AMBER', red: 'RED', purple: 'RED ★' };
+    return map[r] || r.toUpperCase();
+  }
+
+  function ragClass(r) {
+    return 'rag-' + r;
+  }
+
+  function scoreColor(v) {
+    if (v >= 90) return '#15803d';
+    if (v >= 75) return '#b45309';
+    return '#b91c1c';
+  }
+
+  function scoreBg(v) {
+    if (v >= 90) return 'bg-green';
+    if (v >= 75) return 'bg-amber';
+    return 'bg-red';
+  }
+
+  function scoreColorClass(v) {
+    if (v >= 90) return 'c-green';
+    if (v >= 75) return 'c-amber';
+    return 'c-red';
+  }
+
+  // ── Persona map ───────────────────────────────────────────────────────────
+  // Each entry: [cssClass, icon, label, tooltipText]
+  const KPI_PERSONAS = {
+    JI01: ['persona-de',  '⚙',  'Data Engineer',       'Owns pipeline completeness — every order must reach a shipment'],
+    JI02: ['persona-de',  '⚙',  'Data Engineer',       'Responsible for referential integrity in ingestion pipelines'],
+    JI03: ['persona-de',  '⚙',  'Data Engineer',       'Validates end-to-end ORDER→OS→SHIPMENT chain linkage'],
+    CP01: ['persona-ds',  '🔍', 'Data Steward',        'Ensures all business keys are populated before downstream use'],
+    CP02: ['persona-ds',  '🔍', 'Data Steward',        'Null shipment GIDs break all downstream joins and reports'],
+    CP05: ['persona-ops', '🏭', 'Ops Manager',         'Missing actual dates hide late deliveries from OTD reporting'],
+    CS01: ['persona-de',  '⚙',  'Data Engineer',       'Weight reconciliation ensures billing accuracy vs. actuals'],
+    CS02: ['persona-ops', '🏭', 'Ops Manager',         'Impossible date sequences indicate tracking feed errors'],
+    CS07: ['persona-de',  '⚙',  'Data Engineer',       'Ghost mappings corrupt OTD and double-count weight in reports'],
+    RI01: ['persona-ds',  '🔍', 'Data Steward',        'Invalid status enums break status-based filters and BI dashboards'],
+    RI05: ['persona-fa',  '💰', 'Finance Analyst',     'Zero-weight orders cannot be costed, routed, or invoiced'],
+    TP01: ['persona-lp',  '🚚', 'Logistics Planner',   'Late delivery rate is the primary SLA metric for carrier contracts'],
+    BIZ01:['persona-sc',  '📊', 'Supply Chain Mgr',    'On-time delivery % drives customer satisfaction and contract KPIs'],
+    BIZ02:['persona-fa',  '💰', 'Finance Analyst',     'Zero-weight orders skew cost-per-shipment and utilisation reports'],
+    BIZ03:['persona-sc',  '📊', 'Supply Chain Mgr',    'High re-assignment rate signals planning instability and rework cost'],
+  };
+
+  function kpiCard(name, id, kpi, extraNote, prevValue) {
+    const r = id === 'CS07' ? 'purple' : rag(kpi.value, kpi);
+    const displayRag = id === 'CS07' ? 'purple' : r;
+    const valColor = {'green':'c-green','amber':'c-amber','red':'c-red','purple':'c-purple'}[r] || 'c-amber';
+    let deltaHtml = '';
+    if (prevValue !== undefined && prevValue !== null) {
+      const diff = Math.round((kpi.value - prevValue) * 10) / 10;
+      if (diff === 0) {
+        deltaHtml = `<div class="kc-delta same">= no change</div>`;
+      } else {
+        const improved = kpi.higher_is_better ? diff > 0 : diff < 0;
+        const cls = improved ? 'up' : 'down';
+        const arrow = improved ? '↑' : '↓';
+        deltaHtml = `<div class="kc-delta ${cls}">${arrow} ${Math.abs(diff)}% vs last refresh</div>`;
+      }
+    }
+    // Cards for KPIs that have drill-down data are clickable
+    const drilldownKpis = ['JI01','JI02','CS07','CS02','RI01','RI05','TP01','BIZ01','BIZ02','BIZ03','CP01','CP02','CP05','CS01'];
+    const clickable = drilldownKpis.includes(id) && r !== 'green';
+    const cursorStyle = clickable ? 'cursor:pointer;' : '';
+    const clickAttr   = clickable ? `onclick="openDrilldown('${id}','${name}')"` : '';
+    const drillHint   = clickable ? `<div style="font-size:9px;color:#9ca3af;margin-top:3px">Click to view failing records</div>` : '';
+
+    // Persona badge
+    const p = KPI_PERSONAS[id];
+    const personaHtml = p
+      ? `<div class="persona-badge ${p[0]}" title="${p[3]}">${p[1]} ${p[2]}</div>`
+      : '';
+
+    return `
+      <div class="kpi-card ${r}" id="kpi-card-${id}" style="${cursorStyle}" ${clickAttr}>
+        ${personaHtml}
+        <div class="kc-top">
+          <div class="kc-name">${name}</div>
+          <div class="kc-id">${id.replace(/(\D+)(\d+)/, '$1-$2')}</div>
+        </div>
+        <div class="kc-val ${valColor}">${kpi.value}%</div>
+        <div class="kc-meta">
+          <div class="kc-tgt">Target ${kpi.target}</div>
+          <span class="kc-rag ${ragClass(displayRag)}">${ragLabel(displayRag)}</span>
+        </div>
+        ${deltaHtml}
+        <div style="font-size:10px;color:#57606a;margin-top:5px">${extraNote(kpi)}</div>
+        ${drillHint}
+      </div>`;
+  }
+
+  // ── KPI highlight helpers (called by agent actions) ───────────────────────
+
+  /**
+   * Pulse a KPI card with a blue glow to indicate the AI agent is examining it.
+   * Automatically removes the class after the animation completes.
+   */
+  function highlightKpi(kpiId) {
+    const el = document.getElementById('kpi-card-' + kpiId);
+    if (!el) return;
+    el.classList.remove('ai-highlight', 'ai-fixed');
+    // Force reflow so removing+re-adding the class restarts the animation
+    void el.offsetWidth;
+    el.classList.add('ai-highlight');
+    // Scroll card into view smoothly
+    el.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    // Clean up after animation (3 iterations × 1.2s = 3.6s)
+    setTimeout(() => el.classList.remove('ai-highlight'), 3800);
+  }
+
+  /**
+   * Mark a KPI card as fixed (green glow) after a successful remediation.
+   */
+  function markKpiFixed(kpiId) {
+    const el = document.getElementById('kpi-card-' + kpiId);
+    if (!el) return;
+    el.classList.remove('ai-highlight');
+    el.classList.add('ai-fixed');
+    // Fade back to normal after 6s
+    setTimeout(() => el.classList.remove('ai-fixed'), 6000);
+  }
+
+  function breakdownRows(rows, total, colorFn) {
+    return rows.map(r => {
+      const pct = total > 0 ? Math.round(r.count / total * 100) : 0;
+      const color = colorFn(r.label);
+      return `<div class="stat-row"><span>${r.label}</span><span class="stat-val ${color}">${r.count}</span></div>`;
+    }).join('');
+  }
+
+  function dqBarRows(rows, total) {
+    const colors = { 'OK': 'bg-green' };
+    const defaultBad = ['Zero Weight','Orphan - No ORDER','Date Seq / Missing / Invalid','Invalid Status','Ghost Mapping','Ghost - OS link deleted'];
+    return rows.map(r => {
+      const pct = total > 0 ? Math.max(Math.round(r.count / total * 100), 1) : 0;
+      const bg = r.label === 'OK' ? 'bg-green' : defaultBad.some(b => r.label.includes(b.split(' ')[0])) ? 'bg-red' : 'bg-amber';
+      const cnt_color = r.label === 'OK' ? 'c-green' : bg === 'bg-red' ? 'c-red' : 'c-amber';
+      return `
+        <div class="dq-bar-row">
+          <div class="dq-bar-label">${r.label}</div>
+          <div class="dq-bar-bg"><div class="dq-bar-fill ${bg}" style="width:${pct}%"></div></div>
+          <div class="dq-bar-cnt ${cnt_color}">${r.count}</div>
+        </div>`;
+    }).join('');
+  }
+
+  function statusColor(label) {
+    const l = label.toLowerCase();
+    if (l === 'shipped' || l === 'closed' || l === 'ok') return 'c-green';
+    if (l === 'planned' || l === 'in transit' || l === 're-assigned') return 'c-amber';
+    return 'c-red';
+  }
+
+  // ── Render ─────────────────────────────────────────────────────────────────
+
+  let _dqData = {};   // populated in render()
+
+  function showDqTab(tab) {
+    // Update active button
+    ['order','os','shp'].forEach(t => {
+      document.getElementById('dq-tab-' + t).className =
+        'dq-tab-btn' + (t === tab ? ' active' : '');
+    });
+    // Update title
+    const titles = { order: 'ORDER', os: 'ORDER_SHIPMENT', shp: 'SHIPMENT' };
+    const totals = { order: _dqData.orderTotal, os: _dqData.osTotal, shp: _dqData.shpTotal };
+    document.getElementById('dq-bar-title').textContent =
+      `workspace.otm.${titles[tab]} — DQ Flag Breakdown (${totals[tab]} records)`;
+    // Re-render bars
+    document.getElementById('dq-bar-rows').innerHTML =
+      dqBarRows(_dqData[tab], totals[tab]);
+  }
+
+  function render(data) {
+    const { counts, overall_score, pillar_scores, entity_scores, kpis, breakdowns, computed_at } = data;
+    const prevKpis = JSON.parse(localStorage.getItem('otm_prev_kpis') || 'null');
+
+    // Header counts
+    document.getElementById('hdr-counts').textContent =
+      `Orders: ${counts.orders} | OS: ${counts.order_shipments} | Shipments: ${counts.shipments}`;
+
+    // Computed at
+    document.getElementById('computed-at').textContent = `Last computed: ${computed_at}`;
+
+    // Live badge
+    const badge = document.getElementById('live-badge');
+    badge.textContent = '● Live — workspace.Transport Analytics';
+    badge.className = 'live-badge green';
+
+    // Overall score
+    const os = document.getElementById('overall-score');
+    os.textContent = overall_score + '%';
+    os.style.color = scoreColor(overall_score);
+
+    // Pillar scores
+    function setPillar(id, val) {
+      const sc = scoreColorClass(val);
+      const bg = scoreBg(val);
+      document.getElementById('p-' + id).textContent = val + '%';
+      document.getElementById('p-' + id).className = 'ps-val ' + sc;
+      document.getElementById('pf-' + id).style.width = val + '%';
+      document.getElementById('pf-' + id).className = 'ps-fill ' + bg;
+    }
+    setPillar('join', pillar_scores.join_integrity);
+    setPillar('comp', pillar_scores.completeness);
+    setPillar('cons', pillar_scores.consistency);
+    setPillar('time', pillar_scores.timeliness);
+    setPillar('ref',  pillar_scores.referential);
+    if (pillar_scores.business !== undefined) setPillar('biz', pillar_scores.business);
+
+    // Entity health
+    function setEntity(prefix, score) {
+      const bg = scoreBg(score);
+      const sc = scoreColorClass(score);
+      const ragStr = score >= 90 ? 'GREEN' : score >= 75 ? 'AMBER' : 'RED';
+      const ragCls = score >= 90 ? 'rag-green' : score >= 75 ? 'rag-amber' : 'rag-red';
+      document.getElementById('eh-' + prefix + '-bar').style.width = score + '%';
+      document.getElementById('eh-' + prefix + '-bar').className = 'eh-bar-fill ' + bg;
+      document.getElementById('eh-' + prefix + '-val').textContent = score + '%';
+      document.getElementById('eh-' + prefix + '-val').className = 'eh-val ' + sc;
+      document.getElementById('eh-' + prefix + '-rag').innerHTML = `<span class="kc-rag ${ragCls}">${ragStr}</span>`;
+    }
+    setEntity('order', entity_scores.order);
+    setEntity('os',    entity_scores.order_shipment);
+    setEntity('shp',   entity_scores.shipment);
+
+    // Status breakdowns
+    document.getElementById('order-status-breakdown').innerHTML =
+      breakdownRows(breakdowns.order_status, counts.orders, statusColor);
+    document.getElementById('os-dq-breakdown').innerHTML =
+      breakdownRows(breakdowns.os_dq_flags, counts.order_shipments, l => l === 'OK' ? 'c-green' : l.includes('Ghost') ? 'c-purple' : l.includes('Orphan') || l.includes('Cancelled') ? 'c-red' : 'c-amber');
+    document.getElementById('shp-status-breakdown').innerHTML =
+      breakdownRows(breakdowns.shipment_status, counts.shipments, statusColor);
+
+    // Ghost spotlight
+    const cs07 = kpis.CS07;
+    document.getElementById('ghost-val').textContent = cs07.value + '%';
+    document.getElementById('ghost-count').textContent = cs07.num;
+    const gStatus = cs07.value === 0 ? 'GREEN — OK' : 'RED — CRITICAL';
+    const gColor  = cs07.value === 0 ? '#15803d' : '#b91c1c';
+    document.getElementById('ghost-status').textContent = gStatus;
+    document.getElementById('ghost-status').style.color = gColor;
+
+    // KPI grids
+    document.getElementById('kpi-join').innerHTML = [
+      kpiCard('Order-to-Shipment Match Rate', 'JI01', kpis.JI01, k => `${k.num} of ${k.den} orders have active OS row`,  prevKpis?.JI01?.value),
+      kpiCard('Orphan Order_Shipment Rate',   'JI02', kpis.JI02, k => `${k.num} OS rows — no matching ORDER`,            prevKpis?.JI02?.value),
+      kpiCard('Shipment Execution Match Rate','JI03', kpis.JI03, k => `${k.num} of ${k.den} OS rows resolve to a SHIPMENT`, prevKpis?.JI03?.value),
+    ].join('');
+
+    document.getElementById('kpi-comp').innerHTML = [
+      kpiCard('Order Release GID Null Rate', 'CP01', kpis.CP01, k => `${k.num} null values across ${k.den} orders`,      prevKpis?.CP01?.value),
+      kpiCard('Shipment GID Null Rate',      'CP02', kpis.CP02, k => `${k.num} null values across ${k.den} shipments`,   prevKpis?.CP02?.value),
+      kpiCard('Actual Dates Completeness',   'CP05', kpis.CP05, k => `${k.num} of ${k.den} non-cancelled shipments missing actual_arrival`, prevKpis?.CP05?.value),
+    ].join('');
+
+    document.getElementById('kpi-cons').innerHTML = [
+      kpiCard('Weight Mismatch Rate',         'CS01', kpis.CS01, k => `${k.num === 0 ? 'All' : k.num} order weights reconcile with OS quantities (±5%)`, prevKpis?.CS01?.value),
+      kpiCard('Date Sequence Violation Rate', 'CS02', kpis.CS02, k => `${k.num} shipment${k.num !== 1 ? 's' : ''}: actual_arrival before actual_departure`, prevKpis?.CS02?.value),
+      kpiCard('Stale-Delete Ghost Mapping',   'CS07', kpis.CS07, k => `${k.num} order${k.num !== 1 ? 's' : ''} with ghost OS rows in lake`, prevKpis?.CS07?.value),
+    ].join('');
+
+    document.getElementById('kpi-ref').innerHTML = [
+      kpiCard('Invalid Shipment Status Rate',   'RI01', kpis.RI01, k => `${k.num} shipment${k.num !== 1 ? 's' : ''} with invalid status enum`, prevKpis?.RI01?.value),
+      kpiCard('Negative / Zero Quantity Rate',  'RI05', kpis.RI05, k => `${k.num} order${k.num !== 1 ? 's' : ''} with weight_kg = 0`, prevKpis?.RI05?.value),
+    ].join('');
+
+    document.getElementById('kpi-time').innerHTML = kpiCard(
+      'Late Delivery Rate', 'TP01', kpis.TP01,
+      k => `${k.num} shipment${k.num !== 1 ? 's' : ''} arrived after planned_delivery`,
+      prevKpis?.TP01?.value
+    );
+
+    if (kpis.BIZ01) {
+      document.getElementById('kpi-biz').innerHTML = [
+        kpiCard('On-Time Delivery %',          'BIZ01', kpis.BIZ01, k => `${k.num} of ${k.den} Closed shipments delivered on time`, prevKpis?.BIZ01?.value),
+        kpiCard('Zero-Weight Order Rate',      'BIZ02', kpis.BIZ02, k => `${k.num} orders with total_weight_kg = 0`,                prevKpis?.BIZ02?.value),
+        kpiCard('Shipment Re-Assignment Rate', 'BIZ03', kpis.BIZ03, k => `${k.num} OS rows re-assigned to a different shipment`,    prevKpis?.BIZ03?.value),
+      ].join('');
+    }
+
+    // DQ bar — store all 3 datasets for tab switching
+    _dqData = {
+      order:      breakdowns.order_dq,
+      os:         breakdowns.os_dq_flags,
+      shp:        breakdowns.shipment_dq,
+      orderTotal: counts.orders,
+      osTotal:    counts.order_shipments,
+      shpTotal:   counts.shipments,
+    };
+    showDqTab('shp');  // default to SHIPMENT view (preserves existing behaviour)
+
+    // KPI summary table
+    const kpiDefs = [
+      ['JI-01', 'Order-to-Shipment Match Rate',    kpis.JI01, `${kpis.JI01.num} orders with active OS`, `${counts.orders} orders`],
+      ['JI-02', 'Orphan OS Rate',                  kpis.JI02, `${kpis.JI02.num} OS with no ORDER`,      `${counts.order_shipments} OS rows`],
+      ['JI-03', 'Shipment Execution Match Rate',   kpis.JI03, `${kpis.JI03.num} OS resolving to SHIPMENT`, `${counts.order_shipments} OS rows`],
+      ['CP-01', 'Order GID Null Rate',             kpis.CP01, `${kpis.CP01.num} nulls`,                 `${counts.orders} orders`],
+      ['CP-02', 'Shipment GID Null Rate',          kpis.CP02, `${kpis.CP02.num} nulls`,                 `${counts.shipments} shipments`],
+      ['CP-05', 'Actual Dates Completeness',       kpis.CP05, `${kpis.CP05.num} null actual_arrival`,   `${kpis.CP05.den} non-cancelled shipments`],
+      ['CS-07', 'Ghost Mapping Rate ★',            kpis.CS07, `${kpis.CS07.num} orders with ghost OS rows`, `${counts.orders} orders`],
+      ['CS-01', 'Weight Mismatch Rate',            kpis.CS01, `${kpis.CS01.num} mismatched orders`,     `${counts.orders} orders`],
+      ['CS-02', 'Date Sequence Violation Rate',    kpis.CS02, `${kpis.CS02.num} shipment(s)`,           `${counts.shipments} shipments`],
+      ['RI-01', 'Invalid Shipment Status Rate',    kpis.RI01, `${kpis.RI01.num} shipment(s) (invalid enum)`, `${counts.shipments} shipments`],
+      ['RI-05', 'Zero / Negative Quantity Rate',   kpis.RI05, `${kpis.RI05.num} orders = 0 kg`,         `${counts.orders} orders`],
+      ['TP-01', 'Late Delivery Rate',              kpis.TP01, `${kpis.TP01.num} shipment(s) arrived late`, `${kpis.TP01.den} non-cancelled shipments`],
+      ...(kpis.BIZ01 ? [
+        ['BIZ-01', 'On-Time Delivery %',             kpis.BIZ01, `${kpis.BIZ01.num} on-time Closed shipments`, `${kpis.BIZ01.den} Closed shipments`],
+        ['BIZ-02', 'Zero-Weight Order Rate',         kpis.BIZ02, `${kpis.BIZ02.num} zero-weight orders`,        `${counts.orders} orders`],
+        ['BIZ-03', 'Shipment Re-Assignment Rate',    kpis.BIZ03, `${kpis.BIZ03.num} re-assigned OS rows`,       `${counts.order_shipments} OS rows`],
+      ] : []),
+    ];
+    const rows = kpiDefs.map(([id, name, k, num, den]) => {
+      const r = id === 'CS-07' ? 'purple' : rag(k.value, k);
+      const vc = id === 'CS-07' ? 'c-purple' : (r === 'green' ? 'c-green' : r === 'amber' ? 'c-amber' : 'c-red');
+      const bg = id === 'CS-07' ? '#fdf4ff' : '';
+      return `<tr style="background:${bg}">
+        <td style="padding:6px 10px;border-bottom:1px solid #f0f0f0">${id === 'CS-07' ? '<strong>' : ''}${id} ${name}${id === 'CS-07' ? '</strong>' : ''}</td>
+        <td style="padding:6px 10px;border-bottom:1px solid #f0f0f0">${num}</td>
+        <td style="padding:6px 10px;border-bottom:1px solid #f0f0f0">${den}</td>
+        <td style="padding:6px 10px;border-bottom:1px solid #f0f0f0;text-align:right;font-weight:700" class="${vc}">${k.value}%</td>
+        <td style="padding:6px 10px;border-bottom:1px solid #f0f0f0">${k.target}</td>
+        <td style="padding:6px 10px;border-bottom:1px solid #f0f0f0;text-align:center"><span class="kc-rag rag-${r}">${ragLabel(r)}</span></td>
+      </tr>`;
+    }).join('');
+    document.getElementById('kpi-summary-table').innerHTML = `
+      <table>
+        <thead><tr style="background:#f7f8fa">
+          <th style="padding:7px 10px;border-bottom:1px solid #e5e7eb">KPI</th>
+          <th style="padding:7px 10px;border-bottom:1px solid #e5e7eb">Numerator</th>
+          <th style="padding:7px 10px;border-bottom:1px solid #e5e7eb">Denominator</th>
+          <th style="padding:7px 10px;text-align:right;border-bottom:1px solid #e5e7eb">Value</th>
+          <th style="padding:7px 10px;border-bottom:1px solid #e5e7eb">Target</th>
+          <th style="padding:7px 10px;text-align:center;border-bottom:1px solid #e5e7eb">Status</th>
+        </tr></thead>
+        <tbody>${rows}</tbody>
+      </table>`;
+    filterEntity('all');
+    localStorage.setItem('otm_prev_kpis', JSON.stringify(kpis));
+    // Store full payload so AI summary + chat agents can access it
+    _currentKpisData = data;
+  }
+
+  // ── Entity filter ──────────────────────────────────────────────────────────
+
+  function filterEntity(entity) {
+    // Update active pill — toggle a class rather than wiping cssText
+    ['all','order','os','shipment'].forEach(e => {
+      const pill = document.getElementById('fpill-' + e);
+      if (!pill) return;
+      if (e === entity) {
+        pill.classList.add('active');
+      } else {
+        pill.classList.remove('active');
+      }
+    });
+
+    // Show/hide sections by data-entity
+    document.querySelectorAll('[data-entity]').forEach(el => {
+      const attrs = el.getAttribute('data-entity').split(' ');
+      el.style.display = (entity === 'all' || attrs.includes(entity)) ? '' : 'none';
+    });
+  }
+
+  // ── Drill-down modal ──────────────────────────────────────────────────────
+
+  /** Close the modal and reset its drag position */
+  function closeModal() {
+    const m = document.getElementById('drilldown-modal');
+    if (m.open) m.close();
+    // Reset so it re-centres next open
+    m.style.cssText = m.style.cssText
+      .replace(/left:[^;]+;?/g, '')
+      .replace(/top:[^;]+;?/g, '')
+      .replace(/margin:[^;]+;?/g, '')
+      .replace(/right:[^;]+;?/g, '')
+      .replace(/bottom:[^;]+;?/g, '');
+  }
+
+  // ── Modal backdrop + drag — wired directly (script runs after DOM is ready) ─
+  ;(function () {
+    const m      = document.getElementById('drilldown-modal');
+    const handle = document.getElementById('modal-drag-handle');
+
+    // Clicking the backdrop (the <dialog> element itself, not its children) closes
+    m.addEventListener('click', e => { if (e.target === m) closeModal(); });
+
+    // Drag state
+    let dragging = false, sx = 0, sy = 0, ox = 0, oy = 0;
+
+    handle.addEventListener('mousedown', e => {
+      if (e.target.tagName === 'BUTTON') return; // don't drag when clicking buttons
+      const rc = m.getBoundingClientRect();
+      dragging = true;
+      sx = e.clientX; sy = e.clientY;
+      ox = rc.left;   oy = rc.top;
+      // Switch from auto-centre to explicit coordinates
+      m.style.margin = '0';
+      m.style.left   = ox + 'px';
+      m.style.top    = oy + 'px';
+      m.style.right  = 'auto';
+      m.style.bottom = 'auto';
+      handle.style.cursor = 'grabbing';
+      e.preventDefault();
+    });
+
+    window.addEventListener('mousemove', e => {
+      if (!dragging) return;
+      m.style.left = (ox + e.clientX - sx) + 'px';
+      m.style.top  = (oy + e.clientY - sy) + 'px';
+    });
+
+    window.addEventListener('mouseup', () => {
+      if (!dragging) return;
+      dragging = false;
+      handle.style.cursor = 'grab';
+    });
+  })();
+
+  /**
+   * Opens the drill-down modal for a KPI, fetches failing records, renders table.
+   * @param {string} kpiId   - e.g. 'JI02'
+   * @param {string} label   - human-readable KPI name
+   */
+  async function openDrilldown(kpiId, label) {
+    const modal    = document.getElementById('drilldown-modal');
+    const body     = document.getElementById('modal-body');
+    const title    = document.getElementById('modal-title');
+    const subtitle = document.getElementById('modal-subtitle');
+
+    // Reset any previous drag position so it opens centred every time
+    modal.style.left   = '';
+    modal.style.top    = '';
+    modal.style.right  = '';
+    modal.style.bottom = '';
+    modal.style.margin = 'auto';
+
+    // Add a plain-English KPI description above the table
+    const PLAIN_ENGLISH = {
+      JI01: 'These orders exist in the system but have not been linked to any active shipment. They will not appear in delivery reports or tracking feeds until they are assigned.',
+      JI02: 'These shipment-link records point to orders that no longer exist. They were probably created during a data import that went wrong and are now "orphaned" — floating in the system with nothing to connect to.',
+      CP01: 'These orders are missing their Order Release GID — the primary business key used across Transport Analytics and all downstream systems. Without a GID, the order cannot be tracked, joined, or reported on.',
+      CP02: 'These shipments are missing their Shipment GID. A null GID breaks every downstream join and means these shipments are invisible to Transport Analytics reporting, carrier portals, and visibility tools.',
+      CP05: 'These shipments have been executed but are missing their actual arrival date. Without this date, the On-Time Delivery calculation cannot include them — inflating or deflating OTD metrics.',
+      CS01: 'These orders show a weight discrepancy greater than 5% between the order total and the sum of individual shipment weights. Billing and rate calculations will be inaccurate for these orders.',
+      CS07: 'These orders appear to be assigned to two different shipments at the same time. That should never happen — it usually means an old assignment was cancelled in the source system but the cancellation was not passed through to the data lake.',
+      CS02: 'These shipments show an arrival date that is earlier than the departure date, which is physically impossible. The dates were likely entered in the wrong order.',
+      RI01: 'These shipments have a status that is not recognised by the system. Automated reports and dashboards filter by status, so these records will be silently excluded from counts.',
+      RI05: 'These orders have a recorded weight of zero kilograms. That means they cannot be costed, rated, or routed correctly — and any cost-per-shipment calculations will be distorted.',
+      TP01: 'These shipments arrived later than their planned delivery date. Each one represents a potential SLA breach with the carrier or customer.',
+      BIZ01:'These are your successfully on-time deliveries — shipments that were closed and arrived on or before the planned date. Shown here for reference.',
+      BIZ02:'Same zero-weight orders as RI-05, viewed from a business cost perspective. Without a weight, these orders cannot generate a freight invoice.',
+      BIZ03:'These shipment-link records were re-assigned — the order was moved from one shipment to another after the initial plan was set. High re-assignment volume signals planning instability.',
+    };
+    const p = KPI_PERSONAS[kpiId];
+    const personaBanner = p
+      ? `<div style="display:flex;align-items:center;gap:8px;margin-bottom:10px">
+           <span class="persona-badge ${p[0]}">${p[1]} ${p[2]}</span>
+           <span style="font-size:11px;color:#57606a">${p[3]}</span>
+         </div>` : '';
+    const plainDesc = PLAIN_ENGLISH[kpiId]
+      ? `<div style="background:#eff6ff;border-left:3px solid #3b82d4;border-radius:0 6px 6px 0;padding:9px 12px;margin-bottom:12px;font-size:12px;color:#1f2328;line-height:1.6">
+           <strong style="color:#1d4ed8">What this means:</strong> ${PLAIN_ENGLISH[kpiId]}
+         </div>` : '';
+
+    title.textContent    = label + ' — Failing Records';
+    subtitle.textContent = kpiId + ' · workspace.Transport Analytics';
+    body.innerHTML       = personaBanner + plainDesc + '<div class="skeleton" style="height:120px;border-radius:6px"></div>';
+    modal.showModal();
+
+    try {
+      const res  = await fetch(`/api/drilldown/${kpiId}`);
+      const data = await res.json();
+      if (!res.ok || data.error) throw new Error(data.error || 'API error');
+
+      if (data.count === 0) {
+        body.innerHTML = personaBanner + plainDesc + '<div style="color:#15803d;font-size:13px;padding:20px 0">&#10003; No failing records — this KPI is passing cleanly.</div>';
+        return;
+      }
+
+      // Store CSV source for copy button
+      window._drilldownData = data;
+
+      // Build table
+      const cols = data.columns;
+      const thead = `<tr>${cols.map(c => `<th style="padding:5px 10px;background:#f7f8fa;border-bottom:1px solid #e5e7eb;text-align:left;font-size:11px;font-weight:600;color:#57606a;white-space:nowrap">${c}</th>`).join('')}</tr>`;
+      const tbody = data.records.map(rec =>
+        `<tr>${cols.map(c => `<td style="padding:4px 10px;border-bottom:1px solid #f3f4f6;font-size:11.5px;white-space:nowrap">${rec[c] ?? ''}</td>`).join('')}</tr>`
+      ).join('');
+
+      body.innerHTML = personaBanner + plainDesc + `
+        <div style="font-size:11px;color:#57606a;margin-bottom:8px">${data.count} record${data.count !== 1 ? 's' : ''} found — showing up to 50</div>
+        <div style="overflow-x:auto">
+          <table id="drilldown-table" style="width:100%;border-collapse:collapse;font-size:11.5px">
+            <thead>${thead}</thead>
+            <tbody>${tbody}</tbody>
+          </table>
+        </div>`;
+    } catch (e) {
+      body.innerHTML = personaBanner + `<div style="color:#b91c1c;font-size:12px">Failed to load data: ${e.message}</div>`;
+    }
+  }
+
+  /** Copies the current drill-down table as CSV to clipboard. */
+  function copyModalCsv() {
+    const d = window._drilldownData;
+    if (!d) return;
+    const lines = [d.columns.join(',')];
+    d.records.forEach(rec => lines.push(d.columns.map(c => JSON.stringify(rec[c] ?? '')).join(',')));
+    navigator.clipboard.writeText(lines.join('\n')).then(() => {
+      const btn = document.querySelector('#drilldown-modal button');
+      const orig = btn.textContent;
+      btn.textContent = 'Copied!';
+      setTimeout(() => btn.textContent = orig, 1500);
+    });
+  }
+
+  // ── Sparkline rendering ────────────────────────────────────────────────────
+  /**
+   * Draws a tiny inline SVG polyline sparkline into a .spark-card element.
+   * @param {string} containerId  - ID of the .spark-card div
+   * @param {number[]} values     - array of numeric scores (0–100)
+   * @param {string[]} labels     - array of human-readable labels for each point
+   * @param {string} colorHex     - stroke colour e.g. '#3b82d4'
+   * @param {string} cardLabel    - heading text shown above the sparkline
+   */
+  function renderSparkline(containerId, values, labels, colorHex, cardLabel) {
+    const el = document.getElementById(containerId);
+    if (!el) return;
+    if (values.length < 2) {
+      el.innerHTML = `<div class="spark-card-label">${cardLabel}</div><div style="font-size:10px;color:#9ca3af;margin-top:6px">Not enough data</div>`;
+      return;
+    }
+
+    const W = 220, H = 44;
+    const PAD = 4;
+    const min = Math.min(...values) - 5;
+    const max = Math.max(...values) + 5;
+    const scaleY = v => H - PAD - ((v - min) / (max - min || 1)) * (H - PAD * 2);
+    const scaleX = i => PAD + (i / (values.length - 1)) * (W - PAD * 2);
+
+    const points = values.map((v, i) => `${scaleX(i).toFixed(1)},${scaleY(v).toFixed(1)}`).join(' ');
+    const lastVal = values[values.length - 1];
+    const prevVal = values[values.length - 2];
+    const delta = (lastVal - prevVal).toFixed(1);
+    const deltaClass = delta > 0 ? 'up' : delta < 0 ? 'down' : 'same';
+    const deltaSign = delta > 0 ? '+' : '';
+    const lastColor = scoreColor(lastVal);
+
+    // Build tooltip rects (invisible; title tags work natively in SVG)
+    const dots = values.map((v, i) => {
+      const lbl = labels[i] ? labels[i].replace(/"/g, "'") : '';
+      return `<circle cx="${scaleX(i).toFixed(1)}" cy="${scaleY(v).toFixed(1)}" r="3" fill="${colorHex}" stroke="#fff" stroke-width="1.5"><title>${lbl}: ${v}%</title></circle>`;
+    }).join('');
+
+    el.innerHTML = `
+      <div class="spark-card-label">${cardLabel}</div>
+      <div class="spark-card-val" style="color:${lastColor}">${lastVal}%</div>
+      <svg viewBox="0 0 ${W} ${H}" width="${W}" height="${H}" style="overflow:visible">
+        <polyline fill="none" stroke="${colorHex}" stroke-width="2"
+          stroke-linejoin="round" stroke-linecap="round" points="${points}"/>
+        ${dots}
+      </svg>
+      <div class="spark-delta ${deltaClass}">${deltaSign}${delta}% vs prev snapshot</div>
+    `;
+  }
+
+  /**
+   * Renders the snapshot history table into #history-table-container.
+   * @param {Object[]} snapshots - array of snapshot objects from /api/history
+   */
+  function renderHistoryTable(snapshots) {
+    const el = document.getElementById('history-table-container');
+    if (!el) return;
+    if (!snapshots || snapshots.length === 0) {
+      el.innerHTML = '<div class="trend-notice">Trend data not yet seeded — run <code>seed_kpi_history.py</code> to populate.</div>';
+      return;
+    }
+
+    const todayLabel = snapshots[snapshots.length - 1].label || '';
+    let rows = '';
+    snapshots.forEach((s, i) => {
+      const prev = snapshots[i - 1];
+      const delta = prev ? (s.overall_score - prev.overall_score).toFixed(1) : null;
+      let deltaHtml = '—';
+      if (delta !== null) {
+        const cls = delta > 0 ? 'c-green' : delta < 0 ? 'c-red' : '';
+        const sign = delta > 0 ? '+' : '';
+        deltaHtml = `<span class="${cls}">${sign}${delta}%</span>`;
+      }
+      const dateStr = (s.captured_at || '').slice(0, 10);
+      const isToday = s.label === todayLabel && i === snapshots.length - 1;
+      const rowClass = isToday ? 'today' : '';
+      const labelStar = isToday ? ' ★' : s.label.includes('Post-fix') ? ' ✓' : '';
+      rows += `<tr class="${rowClass}">
+        <td>${s.label}${labelStar}</td>
+        <td>${dateStr}</td>
+        <td style="color:${scoreColor(s.overall_score)};font-weight:700">${s.overall_score}%</td>
+        <td>${deltaHtml}</td>
+      </tr>`;
+    });
+
+    el.innerHTML = `
+      <table class="history-table">
+        <thead><tr><th>Snapshot</th><th>Date</th><th>Overall Score</th><th>Δ vs Previous</th></tr></thead>
+        <tbody>${rows}</tbody>
+      </table>`;
+  }
+
+  /**
+   * Re-renders all 6 sparklines from window._historyData.
+   * Called on first load and again after a Post-fix snapshot is added.
+   */
+  function renderAllSparklines() {
+    const snaps = window._historyData;
+    if (!snaps || snaps.length < 2) {
+      // Show notice in each card
+      ['overall','join','comp','cons','time','ref'].forEach(id => {
+        const el = document.getElementById('spark-' + id);
+        if (el) el.innerHTML = '<div class="trend-notice" style="font-size:10px">Run seed_kpi_history.py</div>';
+      });
+      return;
+    }
+
+    const vals  = k => snaps.map(s => s[k] ?? 0);
+    const lbls  = snaps.map(s => s.label || '');
+    renderSparkline('spark-overall', vals('overall_score'), lbls, '#3b82d4',  'Overall Score');
+    renderSparkline('spark-join',    vals('pillar_join'),   lbls, '#15803d',  'Join Integrity');
+    renderSparkline('spark-comp',    vals('pillar_comp'),   lbls, '#0369a1',  'Completeness');
+    renderSparkline('spark-cons',    vals('pillar_cons'),   lbls, '#b45309',  'Consistency');
+    renderSparkline('spark-time',    vals('pillar_time'),   lbls, '#6d28d9',  'Timeliness');
+    renderSparkline('spark-ref',     vals('pillar_ref'),    lbls, '#be185d',  'Referential');
+  }
+
+  // ── Fetch helpers ──────────────────────────────────────────────────────────
+
+  function setLoading(on) {
+    const btn = document.getElementById('refresh-btn');
+    const icon = document.getElementById('refresh-icon');
+    btn.disabled = on;
+    icon.innerHTML = on ? '<span class="spin">&#8635;</span>' : '&#8635;';
+    if (on) {
+      document.getElementById('live-badge').textContent = '● Fetching…';
+      document.getElementById('live-badge').className = 'live-badge loading';
+    }
+  }
+
+  /** Loads /api/history once and renders sparklines + history table. */
+  async function loadHistory() {
+    try {
+      const res = await fetch('/api/history');
+      const data = await res.json();
+      if (!res.ok || data.error) return; // silently skip if table not seeded yet
+      window._historyData = data.snapshots || [];
+      renderAllSparklines();
+      renderHistoryTable(window._historyData);
+    } catch (_) {
+      // Not critical — dashboard works without history
+    }
+  }
+
+  /** Fetches /api/kpis, re-renders KPI panels. */
+  async function loadData() {
+    setLoading(true);
+    document.getElementById('error-banner').style.display = 'none';
+    try {
+      const res = await fetch('/api/kpis');
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'API error ' + res.status);
+      render(data);
+    } catch (e) {
+      const badge = document.getElementById('live-badge');
+      badge.textContent = '● Error';
+      badge.className = 'live-badge error';
+      const banner = document.getElementById('error-banner');
+      banner.textContent = 'Failed to load live data: ' + e.message;
+      banner.style.display = 'block';
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  /** Manual "Re-compute KPIs" button handler. */
+  function recomputeKpis() {
+    loadData();
+  }
+
+  // ── AI Summary ────────────────────────────────────────────────────────────
+  let _currentKpisData = null;
+
+  async function regenerateSummary() {
+    const btn  = document.getElementById('summary-btn');
+    const text = document.getElementById('ai-summary-text');
+    btn.disabled = true;
+    btn.textContent = 'Generating…';
+    text.innerHTML = '<span class="skeleton" style="height:14px;width:90%;display:block;border-radius:3px;margin-bottom:6px"></span><span class="skeleton" style="height:14px;width:65%;display:block;border-radius:3px"></span>';
+    try {
+      const res  = await fetch('/api/agents/summary', {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(_currentKpisData || {})});
+      const data = await res.json();
+      document.getElementById('ai-summary-text').textContent = data.summary || 'AI summary unavailable.';
+    } catch {
+      document.getElementById('ai-summary-text').textContent = 'AI summary unavailable — check Bob API configuration.';
+    } finally {
+      btn.disabled = false;
+      btn.textContent = 'Regenerate';
+    }
+  }
+
+  // ── Monitor Agent ─────────────────────────────────────────────────────────
+
+  async function runMonitorAgent() {
+    const btn  = document.getElementById('monitor-btn');
+    const icon = document.getElementById('monitor-icon');
+    const meta = document.getElementById('alerts-meta');
+    btn.disabled = true;
+    icon.innerHTML = '<span class="spin">&#8635;</span>';
+    meta.textContent = 'Running Monitor Agent…';
+    try {
+      const res  = await fetch('/api/agents/monitor', {method:'POST'});
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Agent error');
+      meta.textContent = `${data.inserted} new alert(s) inserted. Refreshing…`;
+      // Highlight every KPI that got a new alert
+      (data.alerts || []).forEach(a => highlightKpi(a.kpi_id));
+      await loadAlerts();
+    } catch (e) {
+      meta.textContent = 'Monitor Agent error: ' + e.message;
+    } finally {
+      btn.disabled = false;
+      icon.innerHTML = '&#9655;';
+    }
+  }
+
+  async function loadAlerts() {
+    try {
+      const res  = await fetch('/api/alerts');
+      const data = await res.json();
+      if (!res.ok || data.error) return;
+      renderAlerts(data.alerts || []);
+      document.getElementById('alerts-meta').textContent =
+        data.count > 0 ? `${data.count} open alert(s)` : 'No open alerts.';
+    } catch { /* non-critical */ }
+  }
+
+  // Plain-English descriptions of what each KPI alert means to a non-technical reader
+  const ALERT_PLAIN = {
+    JI01: 'Some orders are not linked to any active shipment — they are effectively invisible to planning and delivery tracking.',
+    JI02: 'There are shipment-link records floating in the system with no matching order. These "orphan" rows can cause incorrect counts and confusing reports.',
+    CS07: 'Some orders appear to be connected to two shipments at the same time. This is caused by a cancelled shipment assignment that was never cleaned up, and it corrupts on-time delivery calculations.',
+    CS02: 'A shipment record shows an arrival date before its departure date, which is impossible. This is a data entry error that will show up incorrectly in delivery performance reports.',
+    RI01: 'A shipment is using a status value that the system does not recognise. It will be excluded from any reports that filter by status.',
+    RI05: 'Some orders have a weight of zero, meaning they cannot be priced, routed, or invoiced correctly.',
+    TP01: 'Some shipments arrived after their planned delivery date, which counts as a missed SLA for the carrier or customer.',
+    BIZ01:'On-time delivery percentage is below target — more shipments are arriving late than allowed under current service agreements.',
+    BIZ02:'Zero-weight orders distort cost-per-shipment reporting. Every affected order generates a freight record that cannot be accurately invoiced.',
+    BIZ03:'Shipment re-assignments indicate that the original delivery plan had to be changed after execution started, adding cost and complexity.',
+  };
+
+  function renderAlerts(alerts) {
+    const el = document.getElementById('alerts-container');
+    if (!alerts.length) {
+      el.innerHTML = '<div style="font-size:11.5px;color:#9ca3af;padding:10px 0">No open alerts.</div>';
+      return;
+    }
+    el.innerHTML = alerts.map(a => {
+      const sevColor = a.severity === 'RED' ? '#b91c1c' : '#b45309';
+      const sevBg    = a.severity === 'RED' ? '#fee2e2' : '#fef9c3';
+      const leftBorder = a.severity === 'RED' ? '#ef4444' : '#f59e0b';
+      const hasDrill = ['JI01','JI02','CS07','CS02','RI01','RI05','TP01','BIZ01','BIZ02','BIZ03','CP01','CP02','CP05','CS01'].includes(a.kpi_id);
+
+      // Persona banner
+      const p = KPI_PERSONAS[a.kpi_id];
+      const personaBanner = p
+        ? `<div style="display:inline-flex;align-items:center;gap:6px;margin-bottom:8px">
+             <span class="persona-badge ${p[0]}">${p[1]} ${p[2]}</span>
+             <span style="font-size:10px;color:#57606a">${p[3]}</span>
+           </div>` : '';
+
+      // Plain-English explanation for non-technical stakeholders
+      const plain = ALERT_PLAIN[a.kpi_id];
+      const plainBox = plain
+        ? `<div style="background:#f7f8fa;border-left:3px solid #e5e7eb;border-radius:0 5px 5px 0;padding:7px 10px;margin-bottom:8px;font-size:11.5px;color:#374151;line-height:1.6">
+             <strong style="color:#1f2328">In plain English:</strong> ${plain}
+           </div>` : '';
+
+      return `
+        <div style="border:1px solid #e5e7eb;border-left:3px solid ${leftBorder};border-radius:7px;padding:10px 13px;margin-bottom:8px">
+          <div style="display:flex;align-items:center;gap:8px;margin-bottom:7px">
+            <span style="background:${sevBg};color:${sevColor};font-size:9px;font-weight:700;padding:2px 7px;border-radius:8px;text-transform:uppercase">${a.severity}</span>
+            <span style="font-size:12px;font-weight:700;color:#1f2328">${a.kpi_id}</span>
+            <span style="font-size:10px;color:#9ca3af">${(a.created_at||'').slice(0,16)}</span>
+            <span style="font-size:10px;color:#9ca3af;margin-left:auto">${a.status}</span>
+          </div>
+          ${personaBanner}
+          ${plainBox}
+          ${a.message && !a.message.startsWith('ROOT CAUSE:') ? `<div style="font-size:11px;color:#57606a;margin-bottom:8px;border-top:1px solid #f3f4f6;padding-top:7px">${a.message}</div>` : ''}
+          <div style="display:flex;gap:6px;flex-wrap:wrap">
+            ${hasDrill ? `<button onclick="explainAlert(${a.alert_id},'${a.kpi_id}')" style="background:#eff6ff;color:#1d4ed8;border:1px solid #bfdbfe;border-radius:5px;padding:4px 12px;font-size:11px;cursor:pointer;font-weight:600" title="AI analyses the actual failing records and explains the root cause">Explain root cause</button>` : ''}
+            ${hasDrill ? `<button onclick="generateFix(${a.alert_id},'${a.kpi_id}')" style="background:#fdf4ff;color:#7c5cd8;border:1px solid #c4b5fd;border-radius:5px;padding:4px 12px;font-size:11px;cursor:pointer;font-weight:600" title="AI drafts a SQL fix for your review — nothing runs until you approve">Generate fix (AI draft)</button>` : ''}
+          </div>
+          <div id="alert-extra-${a.alert_id}" style="margin-top:10px"></div>
+        </div>`;
+    }).join('');
+  }
+
+  async function explainAlert(alertId, kpiId) {
+    const el = document.getElementById('alert-extra-' + alertId);
+    el.innerHTML = '<div class="skeleton" style="height:60px;border-radius:5px"></div>';
+    highlightKpi(kpiId);
+    try {
+      const res  = await fetch('/api/agents/rootcause', {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({kpi_id: kpiId, alert_id: alertId})});
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error);
+
+      const p = KPI_PERSONAS[kpiId];
+      // Persona addressed-to banner
+      const personaBar = p
+        ? `<div style="display:flex;align-items:center;gap:6px;margin-bottom:10px">
+             <span class="persona-badge ${p[0]}">${p[1]} ${p[2]}</span>
+             <span style="font-size:10px;color:#57606a">This analysis is written for the <strong>${p[2]}</strong></span>
+           </div>` : '';
+
+      // Support both new RCA template keys and legacy flat keys
+      const rootCauseText  = data.rootCause        || data.root_cause      || '';
+      const summaryText    = data.issueSummary     || '';
+      const impactText     = data.impact           || '';
+      const correctiveText = data.correctiveAction  || data.suggested_action || '';
+      const preventiveText = data.preventiveAction  || '';
+      const evidenceList   = Array.isArray(data.evidence) ? data.evidence : [];
+      const dd             = data.detectionDetails || {};
+
+      // Issue summary
+      const summaryBox = summaryText
+        ? `<div style="background:#fff8e1;border-left:3px solid #f59e0b;border-radius:0 6px 6px 0;padding:9px 12px;margin-bottom:10px;font-size:12px;color:#1f2328;line-height:1.6">
+             <strong style="color:#92400e">Issue summary:</strong><br/>${summaryText}
+           </div>` : '';
+
+      // Detection details
+      const detectionBox = (dd.dataset || dd.ruleViolated || dd.severity || dd.timestamp)
+        ? `<div style="background:#f7f8fa;border:1px solid #e5e7eb;border-radius:6px;padding:8px 12px;margin-bottom:10px;font-size:11px;color:#374151;line-height:1.7">
+             <strong style="color:#1f2328;font-size:11px">Detection details</strong><br/>
+             ${dd.timestamp   ? `<span style="color:#57606a">Timestamp:</span> ${dd.timestamp}<br/>` : ''}
+             ${dd.dataset     ? `<span style="color:#57606a">Dataset:</span> ${dd.dataset}<br/>` : ''}
+             ${dd.ruleViolated? `<span style="color:#57606a">Rule violated:</span> ${dd.ruleViolated}<br/>` : ''}
+             ${dd.severity    ? `<span style="color:#57606a">Severity:</span> <span style="font-weight:700;color:${dd.severity==='RED'?'#b91c1c':'#b45309'}">${dd.severity}</span>` : ''}
+           </div>` : '';
+
+      // Root cause
+      const whatItMeans = rootCauseText
+        ? `<div style="font-size:12px;color:#374151;margin-bottom:8px;line-height:1.6">
+             <strong>Root cause:</strong> ${rootCauseText}
+           </div>` : '';
+
+      // Business impact
+      const impactBox = impactText
+        ? `<div style="font-size:12px;color:#374151;margin-bottom:8px;line-height:1.6">
+             <strong>Business impact:</strong> ${impactText}
+           </div>` : '';
+
+      // Evidence list
+      const evidenceBox = evidenceList.length
+        ? `<div style="font-size:11.5px;color:#374151;margin-bottom:8px">
+             <strong>Evidence:</strong>
+             <ul style="margin:4px 0 0 16px;padding:0">${evidenceList.map(e => `<li style="margin-bottom:2px">${e}</li>`).join('')}</ul>
+           </div>` : '';
+
+      // Corrective action
+      const actionBox = correctiveText
+        ? `<div style="background:#f0fdf4;border-left:3px solid #22c55e;border-radius:0 6px 6px 0;padding:8px 12px;font-size:12px;color:#14532d;line-height:1.6;margin-bottom:6px">
+             <strong>Corrective action:</strong> ${correctiveText}
+           </div>` : '';
+
+      // Preventive action
+      const preventiveBox = preventiveText
+        ? `<div style="background:#f0f9ff;border-left:3px solid #3b82f6;border-radius:0 6px 6px 0;padding:8px 12px;font-size:12px;color:#1e3a5f;line-height:1.6">
+             <strong>Preventive action:</strong> ${preventiveText}
+           </div>` : '';
+
+      // Legacy pattern field fallback (only shown if no issueSummary)
+      const patternBox = (!summaryText && data.pattern)
+        ? `<div style="font-size:11.5px;color:#374151;margin-bottom:6px">
+             <strong>Common pattern found:</strong> ${data.pattern}
+           </div>` : '';
+
+      el.innerHTML = `
+        <div style="background:#f7f8fa;border:1px solid #e5e7eb;border-radius:7px;padding:12px 14px">
+          <div style="font-weight:700;color:#1d4ed8;font-size:10px;text-transform:uppercase;letter-spacing:0.4px;margin-bottom:10px">Root-Cause Analysis — powered by IBM Bob</div>
+          ${personaBar}
+          ${summaryBox}
+          ${detectionBox}
+          ${whatItMeans}
+          ${impactBox}
+          ${evidenceBox}
+          ${patternBox}
+          ${actionBox}
+          ${preventiveBox}
+        </div>`;
+    } catch(e) {
+      el.innerHTML = `<div style="color:#b91c1c;font-size:11px">Error: ${e.message}</div>`;
+    }
+  }
+
+  let _pendingFix = null;
+
+  async function generateFix(alertId, kpiId) {
+    const el = document.getElementById('alert-extra-' + alertId);
+    el.innerHTML = '<div class="skeleton" style="height:80px;border-radius:5px"></div>';
+    highlightKpi(kpiId);
+    try {
+      const res  = await fetch('/api/agents/remediate', {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({alert_id: alertId, kpi_id: kpiId, approve: false})});
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error);
+
+      const riskColor = data.risk_level === 'LOW' ? '#15803d' : data.risk_level === 'MEDIUM' ? '#b45309' : '#b91c1c';
+      const riskIcon  = data.risk_level === 'LOW' ? '✓' : data.risk_level === 'MEDIUM' ? '!' : '!!';
+      _pendingFix = {alertId, kpiId, sql: data.sql, explanation: data.explanation};
+
+      // Plain-English "what will change" — visible to non-technical approvers
+      const whatChanges = data.explanation
+        ? `<div style="background:#fff;border:1px solid #e5e7eb;border-radius:6px;padding:9px 12px;margin-bottom:10px;font-size:12px;color:#1f2328;line-height:1.6">
+             <strong style="color:#1f2328">What will change if you approve:</strong><br/>
+             ${data.explanation}
+           </div>` : '';
+
+      // Risk explanation in plain English
+      const riskPlain = {
+        LOW:    'Low risk — only updates a status flag on specific identified rows. No data is deleted.',
+        MEDIUM: 'Medium risk — updates calculated values or touches multiple rows. Review carefully.',
+        HIGH:   'High risk — deletes or modifies many rows. Only approve if you are certain.',
+      };
+
+      el.innerHTML = `
+        <div style="background:#fdf4ff;border:1px solid #c4b5fd;border-radius:7px;padding:12px 14px;font-size:11.5px">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+            <div style="font-weight:700;color:#7c5cd8;font-size:10px;text-transform:uppercase;letter-spacing:0.4px">AI-Generated Fix — IBM Bob</div>
+            <span style="color:${riskColor};background:#fff;border:1px solid;border-color:${riskColor};border-radius:5px;padding:2px 9px;font-size:10px;font-weight:700">${riskIcon} ${data.risk_level} RISK</span>
+          </div>
+          ${whatChanges}
+          <div style="font-size:10px;color:#57606a;margin-bottom:6px">${riskPlain[data.risk_level] || ''}</div>
+          <details style="margin-bottom:10px">
+            <summary style="font-size:10px;font-weight:700;color:#7c5cd8;cursor:pointer;user-select:none;padding:4px 0">View technical SQL (for approvers with database access)</summary>
+            <pre style="background:#1f2328;color:#86efac;padding:8px 10px;border-radius:5px;font-size:10.5px;overflow-x:auto;white-space:pre-wrap;margin-top:6px">${data.sql || ''}</pre>
+          </details>
+          <div style="background:#fef9c3;border:1px solid #fde68a;border-radius:5px;padding:7px 10px;font-size:11px;color:#92400e;margin-bottom:10px">
+            <strong>Nothing has changed yet.</strong> Review the description above, then click <em>Approve &amp; Apply</em> to execute — or Cancel to discard.
+          </div>
+          <div style="display:flex;gap:8px">
+            <button onclick="applyFix(${alertId})" style="background:#15803d;color:#fff;border:none;border-radius:5px;padding:5px 16px;font-size:12px;cursor:pointer;font-weight:700" id="apply-btn-${alertId}">Approve &amp; Apply</button>
+            <button onclick="document.getElementById('alert-extra-${alertId}').innerHTML=''" style="background:#f3f4f6;color:#57606a;border:1px solid #e5e7eb;border-radius:5px;padding:5px 12px;font-size:12px;cursor:pointer">Cancel</button>
+          </div>
+        </div>`;
+    } catch(e) {
+      el.innerHTML = `<div style="color:#b91c1c;font-size:11px">Error: ${e.message}</div>`;
+    }
+  }
+
+  async function applyFix(alertId) {
+    if (!confirm('Apply this fix to the Databricks database?\n\nThis will update the affected records. The change can be reviewed in the KPI cards after it runs.')) return;
+    const btn = document.getElementById('apply-btn-' + alertId);
+    if (btn) { btn.disabled = true; btn.textContent = 'Applying…'; }
+    const fix = _pendingFix;
+    if (!fix || fix.alertId !== alertId) return;
+    const el = document.getElementById('alert-extra-' + alertId);
+    // Determine which KPI this fix is for so we can mark it fixed after
+    const fixKpiId = fix.kpiId || '';
+    try {
+      const res  = await fetch('/api/agents/remediate', {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({alert_id: alertId, approve: true, sql: fix.sql, explanation: fix.explanation})});
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error);
+      el.innerHTML = `<div style="color:#15803d;background:#dcfce7;border-radius:7px;padding:10px 14px;font-size:12px;line-height:1.6"><strong>Fix applied successfully!</strong><br/>The database was updated (rows affected: ${data.rows_affected ?? '?'}). The KPI cards and sparklines are refreshing now — watch for the green glow on the fixed card.</div>`;
+      await Promise.all([loadData(), loadHistory()]);
+      // Mark the fixed KPI card green. RI05 and BIZ02 share the same data —
+      // fixing one fixes both, so highlight both cards together.
+      if (fixKpiId) {
+        markKpiFixed(fixKpiId);
+        const linked = { 'RI05': 'BIZ02', 'BIZ02': 'RI05' };
+        if (linked[fixKpiId]) markKpiFixed(linked[fixKpiId]);
+      }
+      await loadAlerts();
+    } catch(e) {
+      el.innerHTML = `<div style="color:#b91c1c;font-size:11px">Error applying fix: ${e.message}</div>`;
+    }
+  }
+
+  // ── Chat ──────────────────────────────────────────────────────────────────
+
+  let _chatHistory = [];
+
+  function toggleChat() {
+    const panel = document.getElementById('chat-panel');
+    panel.style.display = panel.style.display === 'none' ? 'flex' : 'none';
+    if (panel.style.display === 'flex') document.getElementById('chat-input').focus();
+  }
+
+  function markdownToHtml(text) {
+    // Escape HTML entities first (user-facing text safety)
+    let s = text.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+    // Bold: **text**
+    s = s.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+    // Italic: *text* (single, not adjacent to another *)
+    s = s.replace(/(?<!\*)\*(?!\*)(.+?)(?<!\*)\*(?!\*)/g, '<em>$1</em>');
+    // Inline code: `code`
+    s = s.replace(/`([^`]+)`/g, '<code style="background:#e5e7eb;border-radius:3px;padding:1px 4px;font-size:10.5px">$1</code>');
+    // Unordered list items: lines starting with "- " or "* "
+    s = s.replace(/^[ \t]*[-*] (.+)$/gm, '<li>$1</li>');
+    s = s.replace(/(<li>[\s\S]*?<\/li>)/g, (m) => `<ul style="margin:4px 0 4px 14px;padding:0">${m}</ul>`);
+    // Newlines → <br> (skip lines that are already block elements)
+    s = s.replace(/\n/g, '<br>');
+    // Clean up <br> immediately inside/around list wrappers
+    s = s.replace(/<br>(<ul)/g, '$1').replace(/(<\/ul>)<br>/g, '$1');
+    return s;
+  }
+
+  function appendChatBubble(text, role) {
+    const msgs = document.getElementById('chat-messages');
+    const isUser = role === 'user';
+    const div = document.createElement('div');
+    div.style.cssText = `background:${isUser ? '#1f2328' : '#f7f8fa'};color:${isUser ? '#fff' : '#1f2328'};border-radius:8px;padding:7px 10px;font-size:11.5px;align-self:${isUser ? 'flex-end' : 'flex-start'};max-width:85%;line-height:1.5`;
+    if (isUser) {
+      div.textContent = text;  // user input: always plain text (no injection risk)
+    } else {
+      div.innerHTML = markdownToHtml(text);  // assistant: render markdown
+    }
+    msgs.appendChild(div);
+    msgs.scrollTop = msgs.scrollHeight;
+    return div;
+  }
+
+  async function sendChat() {
+    const input = document.getElementById('chat-input');
+    const msg   = input.value.trim();
+    if (!msg) return;
+    input.value = '';
+    appendChatBubble(msg, 'user');
+    const typingEl = appendChatBubble('…', 'assistant');
+    try {
+      const context = Object.assign({}, _currentKpisData || {}, {
+        history: { snapshots: window._historyData || [] },
+      });
+      const res  = await fetch('/api/agents/chat', {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ message: msg, context, history: _chatHistory.slice(-5) })});
+      const data = await res.json();
+      const reply = data.reply || 'Sorry, I could not process that.';
+      typingEl.innerHTML = markdownToHtml(reply);
+      _chatHistory.push({ role: 'user',      content: msg });
+      _chatHistory.push({ role: 'assistant', content: reply });
+      // Highlight any KPI cards the agent mentioned
+      (data.cited_kpis || []).forEach(kpiId => highlightKpi(kpiId));
+    } catch {
+      typingEl.textContent = 'Error contacting agent.';
+    }
+  }
+
+  // ── Bootstrap ──────────────────────────────────────────────────────────────
+  async function init() {
+    await Promise.all([loadData(), loadHistory()]);
+    loadAlerts();
+    // Auto-generate the AI summary once KPI data is available
+    // Small delay so _currentKpisData is populated by loadData() above
+    regenerateSummary();
+  }
+  init();
+</script>
+
+</body>
+</html>
