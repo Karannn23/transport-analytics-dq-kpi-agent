@@ -1,0 +1,542 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Transport Analytics — Architecture Diagram</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: -apple-system, "Segoe UI", system-ui, sans-serif; background: #0f1117; color: #e2e8f0; font-size: 13px; padding: 28px 20px 48px; }
+
+  h1 { text-align: center; font-size: 18px; font-weight: 700; color: #f8fafc; margin-bottom: 4px; letter-spacing: .03em; }
+  .subtitle { text-align: center; font-size: 12px; color: #64748b; margin-bottom: 32px; }
+
+  .arch { display: grid; gap: 0; max-width: 960px; margin: 0 auto; }
+
+  .layer-wrap { display: grid; grid-template-columns: 90px 1fr; gap: 0; align-items: center; margin-bottom: 8px; }
+  .layer-label {
+    writing-mode: vertical-rl; text-orientation: mixed; transform: rotate(180deg);
+    font-size: 10px; font-weight: 700; letter-spacing: .12em; text-transform: uppercase;
+    color: #475569; padding: 6px 0; text-align: center;
+  }
+  .layer-content { flex: 1; }
+
+  .arrow-row { display: flex; align-items: center; justify-content: center; padding: 3px 0 3px 90px; gap: 6px; color: #475569; font-size: 11px; }
+  .arrow-row span { color: #475569; font-size: 16px; line-height: 1; }
+
+  .box { border-radius: 10px; padding: 12px 16px; border: 1px solid; position: relative; }
+  .box-title { font-size: 12px; font-weight: 700; margin-bottom: 3px; }
+  .box-sub   { font-size: 11px; line-height: 1.6; }
+  .tag { display: inline-block; font-size: 10px; font-weight: 600; padding: 1px 7px; border-radius: 10px; margin-right: 4px; margin-top: 4px; }
+
+  .theme-ui     { background: #1e293b; border-color: #3b82f6; }
+  .theme-ui     .box-title { color: #93c5fd; }
+  .theme-flask  { background: #1a1a2e; border-color: #7c3aed; }
+  .theme-flask  .box-title { color: #c4b5fd; }
+  .theme-agent  { background: #0f2318; border-color: #16a34a; }
+  .theme-agent  .box-title { color: #86efac; }
+  .theme-bob    { background: #1c1009; border-color: #f59e0b; }
+  .theme-bob    .box-title { color: #fcd34d; }
+  .theme-db     { background: #111827; border-color: #0ea5e9; }
+  .theme-db     .box-title { color: #7dd3fc; }
+  .theme-infra  { background: #1a1218; border-color: #ec4899; }
+  .theme-infra  .box-title { color: #f9a8d4; }
+
+  .tag-blue   { background: #1d4ed8; color: #bfdbfe; }
+  .tag-green  { background: #15803d; color: #bbf7d0; }
+  .tag-yellow { background: #92400e; color: #fde68a; }
+  .tag-purple { background: #5b21b6; color: #ddd6fe; }
+  .tag-red    { background: #991b1b; color: #fecaca; }
+  .tag-cyan   { background: #0e7490; color: #a5f3fc; }
+  .tag-pink   { background: #9d174d; color: #fbcfe8; }
+
+  .row-1col   { display: grid; grid-template-columns: 1fr; gap: 10px; }
+  .row-2col   { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .row-3col   { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; }
+  .row-5col   { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; }
+
+  .pipeline-row  { display: flex; align-items: stretch; gap: 0; }
+  .pipeline-box  { flex: 1; }
+  .pipeline-arrow { display: flex; align-items: center; padding: 0 6px; color: #4ade80; font-size: 18px; font-weight: 700; flex-shrink: 0; }
+
+  ul.items { margin-top: 5px; padding-left: 14px; }
+  ul.items li { font-size: 11px; color: #94a3b8; line-height: 1.7; }
+  ul.items li span { color: #cbd5e1; font-weight: 600; }
+
+  .auth-chain { display: flex; gap: 5px; align-items: center; margin-top: 8px; flex-wrap: wrap; }
+  .auth-step  { font-size: 10px; background: #1e293b; border: 1px solid #334155; border-radius: 6px; padding: 3px 9px; color: #cbd5e1; }
+  .auth-arr   { color: #475569; font-size: 12px; }
+
+  .flow-strip { display: flex; gap: 5px; flex-wrap: wrap; margin-top: 6px; }
+
+  .divider { border: none; border-top: 1px dashed #1e293b; margin: 6px 0 6px 90px; }
+
+  .db-table { background: #0c2233; border: 1px solid #0284c7; border-radius: 6px; padding: 7px 8px; }
+  .db-table-title { font-size: 10px; font-weight: 700; color: #38bdf8; }
+  .db-table-rows  { font-size: 10px; color: #94a3b8; margin-top: 2px; }
+  .db-table-cols  { font-size: 10px; color: #64748b; margin-top: 2px; }
+
+  .fallback-bar { margin-top: 8px; background: #120b04; border: 1px solid #44403c; border-radius: 8px; padding: 8px 12px; }
+  .fallback-bar-title { font-size: 10px; font-weight: 700; color: #fcd34d; margin-bottom: 4px; }
+  .fallback-items { display: flex; gap: 14px; flex-wrap: wrap; }
+  .fallback-items span { font-size: 11px; color: #d97706; }
+
+  .section-title { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .1em; margin-bottom: 6px; }
+
+  .legend { display: flex; gap: 16px; justify-content: center; flex-wrap: wrap; margin-top: 28px; padding-top: 18px; border-top: 1px solid #1e293b; }
+  .legend-item { display: flex; align-items: center; gap: 6px; font-size: 11px; color: #94a3b8; }
+  .legend-dot  { width: 12px; height: 12px; border-radius: 3px; border: 2px solid; flex-shrink: 0; }
+
+  .footer { text-align: center; margin-top: 28px; font-size: 11px; color: #334155; border-top: 1px solid #1e293b; padding-top: 14px; }
+</style>
+</head>
+<body>
+
+<h1>Transport Analytics — AI-Powered Data Quality Platform</h1>
+<p class="subtitle">Full system architecture &nbsp;·&nbsp; IBM watsonx Challenge 2026 &nbsp;·&nbsp; Flask · Databricks SQL · IBM Bob · 5 Agents</p>
+
+<div class="arch">
+
+  <!-- ══════════════════════════════════════════════════ LAYER 1 — BROWSER UI -->
+  <div class="layer-wrap">
+    <div class="layer-label">Browser UI</div>
+    <div class="layer-content">
+      <div class="box theme-ui">
+        <div class="box-title">otm_live_dashboard.html &nbsp;·&nbsp; Single-Page Application</div>
+        <div class="row-3col" style="margin-top:10px; gap:8px;">
+          <div>
+            <div class="section-title" style="color:#60a5fa;">KPI Grid</div>
+            <ul class="items">
+              <li>15 KPI cards (RED / AMBER / GREEN)</li>
+              <li>RAG colour + score badge</li>
+              <li>Persona badges (6 roles)</li>
+              <li><span>ai-highlight</span> — blue pulse on agent scan</li>
+              <li><span>ai-fixed</span> — green glow after fix applied</li>
+              <li>Dimension filter pills</li>
+              <li>Drill-down modal (failing rows)</li>
+            </ul>
+          </div>
+          <div>
+            <div class="section-title" style="color:#60a5fa;">Alerts &amp; AI Panel</div>
+            <ul class="items">
+              <li><span>Run Monitor Agent</span> button</li>
+              <li>Alert rows + severity badges</li>
+              <li><span>Explain</span> → root-cause inline render</li>
+              <li><span>Generate Fix</span> → SQL preview block</li>
+              <li><span>Apply Fix</span> → confirm dialog → execute</li>
+              <li>AI Executive Summary (top of page)</li>
+              <li>Regenerate summary button</li>
+            </ul>
+          </div>
+          <div>
+            <div class="section-title" style="color:#60a5fa;">Trend &amp; Chat</div>
+            <ul class="items">
+              <li>7-day sparkline charts</li>
+              <li>6 pillar score strip</li>
+              <li>Overall score gauge (top-left)</li>
+              <li>Chat panel — bottom-right</li>
+              <li><span>cited_kpis</span> → highlight referenced cards</li>
+              <li>Conversation history (last 5 turns)</li>
+            </ul>
+          </div>
+        </div>
+        <div class="flow-strip" style="margin-top:10px;">
+          <span class="tag tag-blue">HTML5 / CSS3 / Vanilla JS</span>
+          <span class="tag tag-blue">fetch() REST calls</span>
+          <span class="tag tag-blue">No framework — zero build step</span>
+          <span class="tag tag-blue">http://localhost:5000</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="arrow-row"><span>↕</span>&nbsp; fetch() &nbsp;·&nbsp; JSON REST &nbsp;·&nbsp; http://localhost:5000</div>
+
+  <!-- ══════════════════════════════════════════════════ LAYER 2 — FLASK API -->
+  <div class="layer-wrap">
+    <div class="layer-label">Flask API</div>
+    <div class="layer-content">
+      <div class="row-2col">
+        <div class="box theme-flask">
+          <div class="box-title">app.py &nbsp;·&nbsp; Flask 3 &nbsp;·&nbsp; 11 Routes &nbsp;·&nbsp; threaded=True</div>
+          <div class="row-2col" style="margin-top:8px; gap:8px;">
+            <div>
+              <div class="section-title" style="color:#a78bfa;">Data Routes (GET)</div>
+              <ul class="items">
+                <li><span>GET /</span> → serve dashboard HTML</li>
+                <li><span>GET /api/kpis</span> → 15 live KPIs from Databricks</li>
+                <li><span>GET /api/history</span> → sparkline snapshot data</li>
+                <li><span>GET /api/alerts</span> → open dq_alerts rows</li>
+                <li><span>GET /api/drilldown/&lt;kpi_id&gt;</span> → up to 20 failing rows</li>
+                <li><span>POST /api/snapshot</span> → save post-fix snapshot</li>
+              </ul>
+            </div>
+            <div>
+              <div class="section-title" style="color:#a78bfa;">Agent Routes (POST)</div>
+              <ul class="items">
+                <li><span>POST /api/agents/monitor</span></li>
+                <li><span>POST /api/agents/rootcause</span></li>
+                <li><span>POST /api/agents/remediate</span></li>
+                <li><span>POST /api/agents/summary</span></li>
+                <li><span>POST /api/agents/chat</span></li>
+              </ul>
+              <div style="margin-top:8px; font-size:10px; color:#6d28d9;">
+                get_cursor() auto-reconnects on stale Databricks connection (1h idle timeout)
+              </div>
+            </div>
+          </div>
+          <div class="flow-strip">
+            <span class="tag tag-purple">Python 3.10+</span>
+            <span class="tag tag-purple">databricks-sql-connector</span>
+            <span class="tag tag-purple">python-dotenv</span>
+          </div>
+        </div>
+        <div class="box theme-infra">
+          <div class="box-title">Utilities &amp; Scripts</div>
+          <div class="row-2col" style="margin-top:8px; gap:8px;">
+            <div>
+              <div class="section-title" style="color:#f9a8d4;">One-Time Setup</div>
+              <ul class="items">
+                <li>create_order_table.py</li>
+                <li>create_shipment_table.py</li>
+                <li>create_order_shipment_table.py</li>
+                <li>create_kpi_snapshot_table.py</li>
+                <li>create_dq_alerts_table.py</li>
+                <li>insert_order_data.py</li>
+                <li>insert_shipment_data.py</li>
+                <li>insert_shipment_bulk.py</li>
+                <li>insert_order_shipment_data.py</li>
+                <li>insert_order_shipment_bulk.py</li>
+                <li>insert_orphan_shipments.py</li>
+                <li>seed_kpi_history.py</li>
+              </ul>
+            </div>
+            <div>
+              <div class="section-title" style="color:#f9a8d4;">Per-Demo</div>
+              <ul class="items">
+                <li><span>test_bob.py</span> — verify Bob connection</li>
+                <li><span>reset_demo.py</span> — revert all 5 KPI fixes, clear alerts &amp; post-fix snapshots</li>
+                <li><span>kpi_compute.py</span> — standalone KPI report</li>
+                <li><span>databricks_connection.py</span> — connection manager</li>
+              </ul>
+              <div class="flow-strip" style="margin-top:8px;">
+                <span class="tag tag-red">python reset_demo.py</span>
+                <span class="tag tag-red">python test_bob.py</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="arrow-row"><span>↕</span>&nbsp; Python function calls &nbsp;·&nbsp; agents/ package imports</div>
+
+  <!-- ══════════════════════════════════════════════════ LAYER 3 — AGENTS -->
+  <div class="layer-wrap">
+    <div class="layer-label">AI Agents</div>
+    <div class="layer-content">
+
+      <div class="section-title" style="color:#4ade80; margin-bottom:6px;">Three-Tier Agentic Pipeline</div>
+      <div class="pipeline-row" style="margin-bottom:10px;">
+        <div class="box theme-agent pipeline-box">
+          <div class="box-title">Tier 1 &nbsp;·&nbsp; Monitor Agent</div>
+          <div style="font-size:10px;color:#4ade80;font-weight:700;margin:4px 0 2px;">"Run Monitor Agent" button</div>
+          <ul class="items">
+            <li><span>Input:</span> 15 KPI values from /api/kpis</li>
+            <li><span>Temp:</span> 0.2 (structured JSON)</li>
+            <li><span>Output:</span> JSON alert array → kpi_id, severity, message, recommendation</li>
+            <li><span>Writes:</span> workspace.otm.dq_alerts</li>
+            <li><span>Dedup:</span> skips KPIs already in Open state</li>
+            <li><span>Fallback:</span> FALLBACK_MESSAGES dict</li>
+          </ul>
+        </div>
+        <div class="pipeline-arrow">→</div>
+        <div class="box theme-agent pipeline-box">
+          <div class="box-title">Tier 2 &nbsp;·&nbsp; Root-Cause Agent</div>
+          <div style="font-size:10px;color:#4ade80;font-weight:700;margin:4px 0 2px;">"Explain" button on alert</div>
+          <ul class="items">
+            <li><span>Input:</span> ≤20 failing rows from /api/drilldown</li>
+            <li><span>Temp:</span> 0.2 (structured JSON)</li>
+            <li><span>Output:</span> root_cause, pattern, affected_count, suggested_action, suggested_sql</li>
+            <li><span>Updates:</span> alert status → 'In Review'</li>
+            <li><span>Fallback:</span> FALLBACK_ANALYSES dict (JI02, CS07, CS02, RI01, RI05, BIZ02, BIZ03)</li>
+          </ul>
+        </div>
+        <div class="pipeline-arrow">→</div>
+        <div class="box theme-agent pipeline-box">
+          <div class="box-title">Tier 3 &nbsp;·&nbsp; Remediation Agent</div>
+          <div style="font-size:10px;color:#4ade80;font-weight:700;margin:4px 0 2px;">"Generate Fix" → "Apply Fix"</div>
+          <ul class="items">
+            <li><span>Draft:</span> approve=false → SQL shown, not executed</li>
+            <li><span>Execute:</span> approve=true → SQL runs on Databricks</li>
+            <li><span>Temp:</span> 0.2 → sql, risk_level, rows_affected_estimate</li>
+            <li><span>Safety:</span> blocks DROP · TRUNCATE · ALTER · DELETE without WHERE</li>
+            <li><span>Post-fix:</span> KPI recompute + POST /api/snapshot + card → GREEN</li>
+            <li><span>Fallback:</span> suggested_sql from root-cause analysis</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="section-title" style="color:#4ade80; margin-bottom:6px;">Supporting Agents</div>
+      <div class="row-2col">
+        <div class="box theme-agent">
+          <div class="box-title">Summary Agent</div>
+          <ul class="items" style="margin-top:4px;">
+            <li><span>Trigger:</span> every page load &amp; "Regenerate" button</li>
+            <li><span>Input:</span> full 15-KPI JSON payload</li>
+            <li><span>Temp:</span> 0.3 (natural language narrative)</li>
+            <li><span>Output:</span> 3-4 sentence executive summary string</li>
+            <li><span>Fallback:</span> _fallback_summary() — rule-based from worst/best KPI</li>
+          </ul>
+        </div>
+        <div class="box theme-agent">
+          <div class="box-title">Chat Agent</div>
+          <ul class="items" style="margin-top:4px;">
+            <li><span>Trigger:</span> user message in chat panel</li>
+            <li><span>Input:</span> question + KPI snapshot + alert history + last 5 conversation turns</li>
+            <li><span>Temp:</span> 0.3 (natural language)</li>
+            <li><span>Output:</span> reply string + cited_kpis list (triggers card pulse animation)</li>
+            <li><span>Fallback:</span> _fallback_reply() keyword-matching (ghost, orphan, fix, trend…)</li>
+          </ul>
+        </div>
+      </div>
+
+      <div style="margin-top:8px; background:#0c1a10; border:1px solid #166534; border-radius:8px; padding:8px 12px; font-size:10px; color:#4ade80;">
+        All prompts in <strong>agents/prompts.py</strong> &nbsp;·&nbsp; Persona-aware (6 roles) &nbsp;·&nbsp; JSON output mode for structured agents &nbsp;·&nbsp; parse_json_response() strips code fences
+      </div>
+
+    </div>
+  </div>
+
+  <div class="arrow-row"><span>↕</span>&nbsp; call_bob() &nbsp;·&nbsp; agents/bob_client.py &nbsp;·&nbsp; Strategy 1 then Strategy 2</div>
+
+  <!-- ══════════════════════════════════════════════════ LAYER 4 — BOB CLIENT -->
+  <div class="layer-wrap">
+    <div class="layer-label">Bob Client</div>
+    <div class="layer-content">
+      <div class="row-2col">
+        <div class="box theme-bob">
+          <div class="box-title">Strategy 1 — Bob Shell Subprocess &nbsp;<span style="font-size:10px;color:#fcd34d;">(preferred)</span></div>
+          <ul class="items" style="margin-top:6px;">
+            <li><span>Command:</span> bob --auth-method api-key --instance-id … --team-id … --yolo --hide-intermediary-output -p "…"</li>
+            <li><span>Key:</span> BOB_API_KEY from .env → passed as subprocess env var</li>
+            <li><span>Bob Shell handles:</span> VPN routing, BFF token exchange, ANSI cleanup</li>
+            <li><span>Prompt:</span> [SYSTEM INSTRUCTIONS] preamble + [USER REQUEST] combined string</li>
+            <li><span>Timeout:</span> 90 s (BOB_SHELL_TIMEOUT env var)</li>
+            <li><span>Retries:</span> 3× with exponential backoff (2 s · 4 s · 6 s)</li>
+            <li><span>Skip:</span> if bob binary not found → jumps to Strategy 2 immediately</li>
+          </ul>
+          <div class="auth-chain">
+            <div class="auth-step">BOB_API_KEY (.env)</div>
+            <div class="auth-arr">→</div>
+            <div class="auth-step">subprocess env</div>
+            <div class="auth-arr">→</div>
+            <div class="auth-step">bob CLI</div>
+            <div class="auth-arr">→</div>
+            <div class="auth-step">BFF token exchange</div>
+            <div class="auth-arr">→</div>
+            <div class="auth-step">inference endpoint</div>
+          </div>
+        </div>
+        <div class="box theme-bob">
+          <div class="box-title">Strategy 2 — Direct HTTP &nbsp;<span style="font-size:10px;color:#fcd34d;">(fallback)</span></div>
+          <ul class="items" style="margin-top:6px;">
+            <li><span>URL:</span> POST https://api.us-east.bob.ibm.com/inference/v1/chat/completions</li>
+            <li><span>Model:</span> openai/gpt-oss-20b</li>
+            <li><span>Auth A — API key:</span> Authorization: Apikey &lt;BOB_API_KEY&gt;</li>
+            <li><span>Auth B — OAuth:</span> Bearer token DPAPI-decrypted from Bob IDE SQLite store (valid ~24 h)</li>
+            <li><span>User-Agent:</span> bobshell/1.0.6 &nbsp;— required to pass Cloudflare WAF on /inference/v1/</li>
+            <li><span>Headers:</span> Content-Type: application/json · x-instance-id · x-team-id</li>
+            <li><span>Payload:</span> { model, temperature, messages: [{role:system}, {role:user}] }</li>
+            <li><span>Response:</span> choices[0].message.content</li>
+            <li><span>Retries:</span> 3× per auth method with 2 s backoff</li>
+          </ul>
+          <div class="auth-chain">
+            <div class="auth-step">API key → headers</div>
+            <div class="auth-arr">→ fail →</div>
+            <div class="auth-step">Bob IDE SQLite</div>
+            <div class="auth-arr">→</div>
+            <div class="auth-step">DPAPI decrypt</div>
+            <div class="auth-arr">→</div>
+            <div class="auth-step">Bearer token → headers</div>
+          </div>
+        </div>
+      </div>
+      <div class="fallback-bar">
+        <div class="fallback-bar-title">BOTH STRATEGIES FAIL → Rule-based Fallback Mode (full demo works without Bob credentials)</div>
+        <div class="fallback-items">
+          <span>Monitor → FALLBACK_MESSAGES dict</span>
+          <span>Root-Cause → FALLBACK_ANALYSES dict</span>
+          <span>Remediation → suggested_sql from root-cause</span>
+          <span>Summary → _fallback_summary()</span>
+          <span>Chat → _fallback_reply() keyword matching</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="arrow-row">
+    <span>↙</span>&nbsp; databricks-sql-connector (ODBC over HTTPS)
+    &nbsp;&nbsp;&nbsp;&nbsp;
+    <span>↕</span>&nbsp; requests (HTTPS · IBM VPN required)
+    &nbsp;&nbsp;&nbsp;&nbsp;
+    <span>↘</span>
+  </div>
+
+  <!-- ══════════════════════════════════════════════════ LAYER 5 — EXTERNAL -->
+  <div class="layer-wrap">
+    <div class="layer-label">External Services</div>
+    <div class="layer-content">
+      <div class="row-2col">
+
+        <!-- Databricks -->
+        <div class="box theme-db">
+          <div class="box-title">Databricks SQL Warehouse &nbsp;·&nbsp; workspace.otm schema</div>
+          <div class="row-5col" style="margin-top:10px;">
+            <div class="db-table">
+              <div class="db-table-title">ORDER</div>
+              <div class="db-table-rows">100 rows</div>
+              <div class="db-table-cols">order_release_gid, total_weight_kg, order_status, dq_flag …</div>
+            </div>
+            <div class="db-table">
+              <div class="db-table-title">ORDER_SHIPMENT</div>
+              <div class="db-table-rows">113 rows</div>
+              <div class="db-table-cols">os_id, shipment_gid, lake_status, otm_deleted, quantity_kg, dq_flag …</div>
+            </div>
+            <div class="db-table">
+              <div class="db-table-title">SHIPMENT</div>
+              <div class="db-table-rows">111 rows</div>
+              <div class="db-table-cols">shipment_gid, status, actual_departure, actual_arrival, weight_kg, dq_flag …</div>
+            </div>
+            <div class="db-table">
+              <div class="db-table-title">kpi_snapshots</div>
+              <div class="db-table-rows">8+ rows</div>
+              <div class="db-table-cols">label, snapshot_date, overall_score, per-KPI values …</div>
+            </div>
+            <div class="db-table">
+              <div class="db-table-title">dq_alerts</div>
+              <div class="db-table-rows">dynamic</div>
+              <div class="db-table-cols">alert_id, kpi_id, severity, message, status, resolved_at, remediation_log …</div>
+            </div>
+          </div>
+          <div style="margin-top:10px; background:#0a1929; border:1px solid #0369a1; border-radius:6px; padding:8px 12px; font-size:10px; color:#94a3b8;">
+            <span style="color:#f59e0b; font-weight:700;">Seeded anomalies:</span>&nbsp;
+            3 ghost-mapped orders (CS-07) &nbsp;·&nbsp; 3 orphan OS rows — OS-X01/X02/X03 (JI-02) &nbsp;·&nbsp;
+            6 zero-weight orders (RI-05/BIZ-02) &nbsp;·&nbsp; 1 date sequence violation SHP-2025-010 (CS-02) &nbsp;·&nbsp;
+            1 invalid status SHP-2025-020 (RI-01) &nbsp;·&nbsp; 7 re-assigned OS rows (BIZ-03)
+          </div>
+          <div class="flow-strip" style="margin-top:8px;">
+            <span class="tag tag-cyan">DATABRICKS_SERVER_HOSTNAME</span>
+            <span class="tag tag-cyan">DATABRICKS_HTTP_PATH</span>
+            <span class="tag tag-cyan">DATABRICKS_ACCESS_TOKEN</span>
+          </div>
+        </div>
+
+        <!-- IBM Bob -->
+        <div class="box theme-bob">
+          <div class="box-title">IBM Bob Inference API &nbsp;·&nbsp; IBM Consulting Advantage</div>
+          <ul class="items" style="margin-top:8px;">
+            <li><span>Endpoint:</span> https://api.us-east.bob.ibm.com/inference/v1/chat/completions</li>
+            <li><span>Model:</span> openai/gpt-oss-20b</li>
+            <li><span>Auth:</span> Apikey &lt;BOB_API_KEY&gt; or Bearer &lt;DPAPI OAuth token&gt;</li>
+            <li><span>User-Agent:</span> bobshell/1.0.6 (required by Cloudflare WAF)</li>
+            <li><span>Instance:</span> x-instance-id · x-team-id required in every request</li>
+            <li><span>Network:</span> IBM VPN (Cisco AnyConnect) required</li>
+          </ul>
+          <div style="margin-top:12px; border-top:1px solid #292524; padding-top:10px;">
+            <div class="section-title" style="color:#fcd34d; margin-bottom:6px;">5 Calls per Full Demo Cycle</div>
+            <div style="display:grid; grid-template-columns:1fr 1fr; gap:6px;">
+              <div style="background:#1c1009;border:1px solid #44403c;border-radius:6px;padding:6px 10px;">
+                <div style="font-size:10px;font-weight:700;color:#fde68a;">Summary Agent</div>
+                <div style="font-size:10px;color:#a8a29e;margin-top:2px;">temp 0.3 · natural language output</div>
+              </div>
+              <div style="background:#1c1009;border:1px solid #44403c;border-radius:6px;padding:6px 10px;">
+                <div style="font-size:10px;font-weight:700;color:#fde68a;">Monitor Agent</div>
+                <div style="font-size:10px;color:#a8a29e;margin-top:2px;">temp 0.2 · JSON array output</div>
+              </div>
+              <div style="background:#1c1009;border:1px solid #44403c;border-radius:6px;padding:6px 10px;">
+                <div style="font-size:10px;font-weight:700;color:#fde68a;">Root-Cause Agent</div>
+                <div style="font-size:10px;color:#a8a29e;margin-top:2px;">temp 0.2 · JSON object output</div>
+              </div>
+              <div style="background:#1c1009;border:1px solid #44403c;border-radius:6px;padding:6px 10px;">
+                <div style="font-size:10px;font-weight:700;color:#fde68a;">Remediation Agent</div>
+                <div style="font-size:10px;color:#a8a29e;margin-top:2px;">temp 0.2 · JSON object output</div>
+              </div>
+              <div style="background:#1c1009;border:1px solid #44403c;border-radius:6px;padding:6px 10px;grid-column:span 2;">
+                <div style="font-size:10px;font-weight:700;color:#fde68a;">Chat Agent</div>
+                <div style="font-size:10px;color:#a8a29e;margin-top:2px;">temp 0.3 · natural language + cited_kpis list</div>
+              </div>
+            </div>
+          </div>
+          <div class="flow-strip" style="margin-top:8px;">
+            <span class="tag tag-yellow">BOB_API_KEY</span>
+            <span class="tag tag-yellow">BOB_INSTANCE_ID</span>
+            <span class="tag tag-yellow">BOB_TEAM_ID</span>
+            <span class="tag tag-yellow">BOB_MODEL</span>
+            <span class="tag tag-yellow">BOB_API_URL</span>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════════════ LAYER 6 — CONFIG -->
+  <hr class="divider" style="margin-top:14px;margin-bottom:14px;"/>
+  <div class="layer-wrap">
+    <div class="layer-label">Config</div>
+    <div class="layer-content">
+      <div class="box theme-infra">
+        <div class="box-title">.env &nbsp;·&nbsp; Environment Variables &nbsp;·&nbsp; loaded via python-dotenv</div>
+        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:8px;">
+          <div>
+            <div class="section-title" style="color:#f9a8d4;">Databricks</div>
+            <ul class="items">
+              <li>DATABRICKS_SERVER_HOSTNAME</li>
+              <li>DATABRICKS_HTTP_PATH</li>
+              <li>DATABRICKS_ACCESS_TOKEN</li>
+            </ul>
+          </div>
+          <div>
+            <div class="section-title" style="color:#f9a8d4;">IBM Bob</div>
+            <ul class="items">
+              <li>BOB_API_KEY &nbsp;<span style="color:#f59e0b;font-size:10px;">(single key for all auth)</span></li>
+              <li>BOB_API_URL</li>
+              <li>BOB_MODEL</li>
+              <li>BOB_INSTANCE_ID</li>
+              <li>BOB_TEAM_ID</li>
+            </ul>
+          </div>
+          <div>
+            <div class="section-title" style="color:#f9a8d4;">Flask / Optional</div>
+            <ul class="items">
+              <li>FLASK_PORT &nbsp;<span>(default 5000)</span></li>
+              <li>FLASK_DEBUG &nbsp;<span>(default false)</span></li>
+              <li>BOB_SHELL_TIMEOUT &nbsp;<span>(default 90 s)</span></li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<!-- Legend -->
+<div class="legend">
+  <div class="legend-item"><div class="legend-dot" style="border-color:#3b82f6;background:#1e293b;"></div>Browser UI</div>
+  <div class="legend-item"><div class="legend-dot" style="border-color:#7c3aed;background:#1a1a2e;"></div>Flask API</div>
+  <div class="legend-item"><div class="legend-dot" style="border-color:#16a34a;background:#0f2318;"></div>AI Agents</div>
+  <div class="legend-item"><div class="legend-dot" style="border-color:#f59e0b;background:#1c1009;"></div>Bob Client / IBM Bob API</div>
+  <div class="legend-item"><div class="legend-dot" style="border-color:#0ea5e9;background:#111827;"></div>Databricks SQL</div>
+  <div class="legend-item"><div class="legend-dot" style="border-color:#ec4899;background:#1a1218;"></div>Infra / Config / Utilities</div>
+</div>
+
+<div class="footer">
+  Transport Analytics AI-Powered Data Quality Platform &nbsp;·&nbsp; IBM watsonx Challenge 2026 &nbsp;·&nbsp; July 2025
+  <br/>Made with IBM Bob
+</div>
+
+</body>
+</html>

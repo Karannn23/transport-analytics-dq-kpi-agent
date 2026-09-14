@@ -1,0 +1,259 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<title>Transport Analytics Demo Script</title>
+<style>
+  body { font-family: -apple-system, "Segoe UI", system-ui, sans-serif; font-size: 14px; line-height: 1.7; background: #f7f8fa; color: #1f2328; max-width: 760px; margin: 0 auto; padding: 32px 24px 64px; }
+  h1 { font-size: 20px; font-weight: 800; margin-bottom: 4px; color: #1f2328; }
+  h2 { font-size: 15px; font-weight: 700; margin: 32px 0 10px; padding: 8px 14px; border-radius: 6px; background: #1f2328; color: #fff; }
+  h3 { font-size: 13px; font-weight: 700; margin: 20px 0 6px; color: #1d4ed8; text-transform: uppercase; letter-spacing: 0.4px; }
+  p { margin: 0 0 10px; }
+  .subtitle { font-size: 12px; color: #57606a; margin-bottom: 28px; border-bottom: 1px solid #e5e7eb; padding-bottom: 14px; }
+
+  .say { background: #eff6ff; border-left: 3px solid #3b82d4; border-radius: 0 6px 6px 0; padding: 10px 14px; margin: 8px 0 12px; font-size: 13px; color: #1e3a5f; line-height: 1.7; }
+  .say em { font-style: normal; font-weight: 700; }
+
+  .action { background: #f0fdf4; border-left: 3px solid #22c55e; border-radius: 0 6px 6px 0; padding: 8px 14px; margin: 6px 0 10px; font-size: 12.5px; color: #14532d; }
+  .action strong { color: #15803d; }
+
+  .point { background: #fdf4ff; border-left: 3px solid #a855f7; border-radius: 0 6px 6px 0; padding: 7px 14px; margin: 6px 0 8px; font-size: 12px; color: #581c87; }
+
+  .warn { background: #fff8e1; border-left: 3px solid #f59e0b; border-radius: 0 6px 6px 0; padding: 8px 14px; margin: 6px 0 10px; font-size: 12.5px; color: #78350f; }
+  .warn strong { color: #92400e; }
+
+  .err { background: #fef2f2; border-left: 3px solid #ef4444; border-radius: 0 6px 6px 0; padding: 8px 14px; margin: 6px 0 10px; font-size: 12.5px; color: #7f1d1d; }
+
+  .note { font-size: 11px; color: #57606a; background: #f7f8fa; border: 1px solid #e5e7eb; border-radius: 5px; padding: 6px 12px; margin: 4px 0 10px; }
+
+  table { width: 100%; border-collapse: collapse; font-size: 12.5px; margin: 12px 0 20px; }
+  th { background: #1f2328; color: #fff; padding: 7px 12px; text-align: left; font-weight: 600; }
+  td { padding: 6px 12px; border-bottom: 1px solid #e5e7eb; vertical-align: top; }
+  tr:last-child td { border-bottom: none; }
+  tr:nth-child(even) td { background: #f7f8fa; }
+  td:first-child { font-weight: 700; white-space: nowrap; color: #1d4ed8; }
+
+  .kpi-tag { display: inline-block; background: #eff6ff; color: #1d4ed8; font-size: 10px; font-weight: 700; padding: 1px 6px; border-radius: 9px; border: 1px solid #bfdbfe; margin: 0 2px; }
+  .red-tag  { background: #fef2f2; color: #b91c1c; border-color: #fca5a5; }
+  .amber-tag{ background: #fff8e1; color: #b45309; border-color: #fcd34d; }
+  .green-tag{ background: #f0fdf4; color: #15803d; border-color: #86efac; }
+  .purple-tag{ background: #faf5ff; color: #7c5cd8; border-color: #c4b5fd; }
+
+  code { background: #e5e7eb; border-radius: 3px; padding: 1px 5px; font-size: 11.5px; font-family: "Consolas", "Courier New", monospace; }
+
+  .step-num { display: inline-block; background: #3b82d4; color: #fff; border-radius: 50%; width: 22px; height: 22px; text-align: center; line-height: 22px; font-size: 11px; font-weight: 700; margin-right: 6px; flex-shrink: 0; }
+
+  .section-icon { font-size: 18px; margin-right: 6px; }
+
+  footer { margin-top: 48px; padding-top: 14px; border-top: 1px solid #e5e7eb; text-align: center; font-size: 11px; color: #9ca3af; }
+</style>
+</head>
+<body>
+
+<h1>Transport Analytics AI-Powered Data Quality Platform</h1>
+<div class="subtitle">Complete Demo Script — IBM watsonx Challenge 2026 &nbsp;·&nbsp; Verified against source code &nbsp;·&nbsp; All figures confirmed live</div>
+
+<!-- ══════════════════════════════════════════════════════════════════ -->
+<h2>BEFORE YOU PRESENT — SETUP CHECKLIST</h2>
+
+<div class="action"><strong>1.</strong> Start Flask server in a terminal: <code>python app.py</code> → keep terminal open</div>
+<div class="action"><strong>2.</strong> Open <code>http://localhost:5000</code> in browser — confirm "● Live — workspace.otm" appears green</div>
+<div class="action"><strong>3.</strong> If you ran the fix flow before: <code>python reset_demo.py</code> to restore anomalies + clear alerts</div>
+<div class="action"><strong>4.</strong> Run <code>python test_bob.py</code> to confirm Bob API is reachable. If it fails, fallback mode still works — all steps still complete</div>
+<div class="warn"><strong>Key numbers to memorise:</strong> 85% overall · 66% Business pillar · 3% CS-07 ghost rate · 6% RI-05 zero-weight · 8 history snapshots (Jun 14 → Jul 20)</div>
+
+<!-- ══════════════════════════════════════════════════════════════════ -->
+<h2>THE 30-SECOND PITCH</h2>
+
+<div class="say">"This is the Transport Analytics AI-Powered Data Quality Platform — built on IBM Bob for the IBM watsonx Challenge 2026. Transport Analytics is the logistics backbone for major supply chains. Every Transport Analytics deployment accumulates silent data quality problems in its data lake — ghost shipments, orphan records, bad dates — that corrupt On-Time Delivery metrics and mislead planners. Traditionally a senior DBA spends 4 to 8 hours a week hunting these down manually. This platform collapses that to under 60 seconds using five IBM Bob agents that monitor, explain, fix, and talk about the data — all from this single dashboard."</div>
+
+<!-- ══════════════════════════════════════════════════════════════════ -->
+<h2>WHAT IS THE DATA?</h2>
+
+<div class="say">"The database is Databricks SQL — a real, live connection. The data is a realistic seeded sample of an Transport Analytics deployment: <em>100 orders, 111 shipments, 113 order-shipment links</em>. I've intentionally baked in the exact anomalies you find in every production Transport Analytics system — ghost mappings, orphan records, impossible dates, zero-weight orders. This makes the demo fully deterministic — every judge sees the exact same issues and the exact same fix."</div>
+
+<!-- ══════════════════════════════════════════════════════════════════ -->
+<h2><span class="section-icon">🔵</span>1. HEADER BAR</h2>
+
+<div class="point">Point to: <code>workspace.otm</code> source pill · entity filter tabs (All / ORDER / ORDER_SHIPMENT / SHIPMENT) · green dot top-right</div>
+
+<div class="say">"This is a live connection — not a mock. The source pill shows the Databricks catalog and schema. The entity tabs filter the entire dashboard — every KPI card, every chart — to a single entity layer. The green dot confirms the connection is active right now."</div>
+
+<div class="note">The dot starts amber "Connecting…" on page load and flips to green once <code>/api/kpis</code> returns successfully. Row counts (100 | 113 | 111) are live from Databricks.</div>
+
+<!-- ══════════════════════════════════════════════════════════════════ -->
+<h2><span class="section-icon">🤖</span>2. AI EXECUTIVE SUMMARY</h2>
+
+<div class="point">Point to: The blue summary panel and the "Regenerate" button</div>
+
+<div class="say">"Every time the page loads, IBM Bob reads all 15 KPIs and writes this 3–4 sentence executive summary. It names the overall score, the most critical RED KPI, and one positive finding — and it addresses the right persona. This is what you'd put at the top of your Monday morning data quality report, written automatically."</div>
+
+<div class="action"><strong>Click:</strong> "Regenerate" button — wait 3–5 seconds for a fresh live Bob response</div>
+
+<div class="say">"That response just hit the IBM Bob inference API live — not a cached answer."</div>
+
+<div class="err"><strong>If Bob is slow:</strong> "This is a live AI call — real inference, not cached. It typically responds in 3–5 seconds." (stall up to 10s)</div>
+<div class="err"><strong>If Bob fails / fallback text appears:</strong> "The dashboard has a built-in fallback — it computes the summary from the KPI data when the API is unreachable. All five agents have this safety net."</div>
+
+<!-- ══════════════════════════════════════════════════════════════════ -->
+<h2><span class="section-icon">📊</span>3. OVERALL SCORE + PILLAR CARDS</h2>
+
+<div class="point">Point to: The 85% score card (dark) · the 6 pillar percentage cards to its right</div>
+
+<div class="say">"<em>85% overall</em> across 15 KPIs and 6 quality dimensions. Notice the <em>Business pillar is at 66%</em> — that's what's dragging the score down. The five technical pillars — Join Integrity at 97%, Completeness at 100%, Consistency at 99%, Timeliness at 100%, Referential at 97% — are all strong. The infrastructure is sound. The business metrics are the problem: zero-weight orders that can't be costed or invoiced, and shipments being re-assigned after planning — classic supply chain data debt."</div>
+
+<div class="note">Hover the <code>ⓘ how scored?</code> tooltip on the overall card to show judges the scoring methodology — each of the 15 KPIs scores 0–100 and the overall is their average.</div>
+
+<!-- ══════════════════════════════════════════════════════════════════ -->
+<h2><span class="section-icon">📈</span>4. DATA QUALITY TREND</h2>
+
+<div class="point">Point to: The 6 sparkline charts · the snapshot history table below them</div>
+
+<div class="say">"This shows <em>6 weeks of history</em> — how each quality pillar evolved from a clean baseline on June 14th down to today. On June 14th, the system was clean at <em>93% overall</em>. By July 3rd, the Ghost Mapping rate crossed the RED threshold. By today it sits at <em>85%</em>. The trend makes the problem visible in a way a single number never can — you can see exactly when degradation started and which pillar drove it."</div>
+
+<div class="point">Point to: The history table — specifically the "Jul 03 — RED threshold crossed" row</div>
+
+<div class="say">"This row is the inflection point. Jun 14 was clean. Jun 17 the first ghost appeared. By Jul 3 the ghost rate hit 3% and crossed RED. That's the moment a DBA should have been paged — and with this platform, they would have been, automatically."</div>
+
+<div class="note">There are <em>6 sparklines</em> (Overall Score + 5 pillars: Join, Completeness, Consistency, Timeliness, Referential). Business pillar has no sparkline. The history table shows 8 labelled snapshots from Jun 14 → Jul 20, plus a "Post-fix" row after you apply a fix during the demo.</div>
+
+<!-- ══════════════════════════════════════════════════════════════════ -->
+<h2><span class="section-icon">🏥</span>5. ENTITY HEALTH + KPI GRID</h2>
+
+<div class="point">Point to: Entity health bars (ORDER 85% AMBER · OS 94.7% GREEN · SHIPMENT 92.8% GREEN) · the 15 KPI cards</div>
+
+<div class="say">"Each KPI card shows its current value, target, RAG status, and a <em>persona badge</em> — who owns this metric. Blue is Data Engineer. Yellow is Finance Analyst. Purple is Supply Chain Manager. This matters because when Bob generates an alert, it addresses the right person directly — not generic dashboard noise."</div>
+
+<table>
+  <tr><th>Badge colour</th><th>Persona</th><th>Owns these KPIs</th></tr>
+  <tr><td>Blue</td><td>⚙ Data Engineer</td><td>JI-01, JI-02, JI-03, CS-01, CS-07</td></tr>
+  <tr><td>Green</td><td>🔍 Data Steward</td><td>CP-01, CP-02, RI-01</td></tr>
+  <tr><td>Red</td><td>🏭 Ops Manager</td><td>CP-05, CS-02</td></tr>
+  <tr><td>Yellow</td><td>💰 Finance Analyst</td><td>RI-05, BIZ-02</td></tr>
+  <tr><td>Orange</td><td>🚚 Logistics Planner</td><td>TP-01</td></tr>
+  <tr><td>Purple</td><td>📊 Supply Chain Mgr</td><td>BIZ-01, BIZ-03</td></tr>
+</table>
+
+<div class="action"><strong>Click:</strong> The <span class="kpi-tag red-tag">RI-05 RED</span> card (Negative / Zero Quantity Rate — 6%)</div>
+
+<div class="say">"Clicking a RED card opens the drill-down — the actual failing records from Databricks. These are the real rows. You can see exactly which order IDs have total_weight_kg = 0, copy them to CSV, and hand them to the Finance Analyst."</div>
+
+<div class="action"><strong>Close</strong> the modal (click ✕ or outside)</div>
+
+<!-- ══════════════════════════════════════════════════════════════════ -->
+<h2><span class="section-icon">🚨</span>6. AI ALERTS — THE MAIN DEMO FLOW</h2>
+
+<div class="point">Point to: "▶ Run Monitor Agent" button · the empty or existing alerts list</div>
+
+<div class="say">"Here's where IBM Bob takes over. Instead of a DBA manually checking 15 KPIs against thresholds and writing up tickets, Bob reads all the live data and generates plain-English, persona-addressed alerts — for every RED and AMBER KPI — in seconds."</div>
+
+<div class="warn"><strong>If alerts already exist</strong> from a previous run: "You can see alerts from an earlier run. The agent deduplicates — it won't insert a second alert for any KPI that's already Open. Let me run it again to show the timing."</div>
+
+<div class="action"><strong>Click:</strong> "▶ Run Monitor Agent"</div>
+
+<div class="say">"Watch the KPI cards — they pulse blue as Bob analyses each one. Within a few seconds you get alerts for every RED and AMBER KPI, each addressed to the right stakeholder."</div>
+
+<h3>Step 6a — Explain Root Cause</h3>
+
+<div class="point">Scroll to the CS-07 alert (Ghost Mapping) — this is the star KPI. Click "Explain root cause"</div>
+
+<div class="say">"Now Bob fetches the actual 3 failing records from Databricks and analyses them. It's not pattern-matching on the KPI percentage — it's reading the actual data rows. It identifies that these 3 orders each have two active ORDER_SHIPMENT rows pointing to different shipments — a CDC delete event that never propagated from Transport Analytics to the data lake."</div>
+
+<div class="note">Root-cause appears inline inside the alert card: yellow "What this means in plain English" box, green "Recommended next step" box. The alert status changes from "Open" to "In Review" in Databricks.</div>
+
+<h3>Step 6b — Generate Fix (Draft)</h3>
+
+<div class="action"><strong>Click:</strong> "Generate fix (AI draft)" on the CS-07 alert</div>
+
+<div class="say">"Bob drafts a corrective SQL statement. It shows you the exact SQL, labels the risk level — LOW in this case — and estimates how many rows it will affect. <em>Critically, nothing has been executed yet.</em> The human is still in control."</div>
+
+<div class="point">Point to the SQL block: <code>UPDATE workspace.otm.order_shipment SET lake_status = 'STALE' WHERE otm_deleted = 'YES' AND lake_status = 'Active'</code></div>
+
+<div class="say">"This is a targeted UPDATE — it only touches the 3 stale rows. No DROP, no TRUNCATE, no blind DELETE. The platform's safety guard would block any SQL that doesn't meet these criteria before it ever reaches Databricks."</div>
+
+<h3>Step 6c — Approve &amp; Apply</h3>
+
+<div class="action"><strong>Click:</strong> "Approve &amp; Apply" → confirm in the dialog</div>
+
+<div class="point">Watch the CS-07 KPI card</div>
+
+<div class="say">"One confirmation click. The SQL runs on Databricks. The KPI recomputes live. Watch the CS-07 card — it pulses and turns green. A new Post-fix data point appears on the Consistency sparkline. The entire cycle — detect, explain, draft, approve, verify — in under 60 seconds. Previously 4 to 8 hours of DBA time."</div>
+
+<div class="note">After applying, the <code>kpi_snapshots</code> table gains a new "Post-fix" row. The sparkline re-renders automatically. The CS-07 card glows green for 6 seconds via the <code>ai-fixed</code> CSS animation.</div>
+
+<!-- ══════════════════════════════════════════════════════════════════ -->
+<h2><span class="section-icon">💬</span>7. CHAT PANEL</h2>
+
+<div class="action"><strong>Click:</strong> The dark chat bubble button in the bottom-right corner</div>
+
+<div class="say">"Finally — natural language. Any analyst can ask questions about this data without writing SQL. Bob has the current KPI state, the full 6-week history, and the open alerts as context."</div>
+
+<div class="action"><strong>Type and send:</strong> "What changed after the fix? Which KPI improved and by how much?"</div>
+
+<div class="say">"Watch the KPI cards — any KPI Bob mentions in its reply pulses blue, linking the text answer back to the visual. The response is formatted with bold highlights and bullet points."</div>
+
+<div class="action"><strong>Then ask:</strong> "If I'm a Finance Analyst, what's the single most important thing I should fix today?"</div>
+
+<div class="say">"Bob tailors the answer to the Finance Analyst persona — it focuses on RI-05 and BIZ-02, the zero-weight orders that are corrupting cost-per-shipment reports. Different persona, different answer from the same data."</div>
+
+<!-- ══════════════════════════════════════════════════════════════════ -->
+<h2>CLOSING LINE</h2>
+
+<div class="say">"This isn't a prototype — every agent call you just saw hit the IBM Bob inference API live. The SQL that fixed CS-07 actually ran on Databricks. And the pattern this builds is not Transport Analytics-specific — any team with a set of measurable KPIs, a database, and non-technical stakeholders who need to understand and act on data quality can use this same three-tier Monitor → Explain → Fix pipeline, built on IBM Bob."</div>
+
+<!-- ══════════════════════════════════════════════════════════════════ -->
+<h2>QUICK-REFERENCE CARD</h2>
+
+<table>
+  <tr><th>Step</th><th>Action</th><th>What to say / watch for</th></tr>
+  <tr><td>1</td><td>Point at header</td><td>Live Databricks connection · entity filter tabs · green dot</td></tr>
+  <tr><td>2</td><td>Click Regenerate</td><td>Bob writes exec summary on demand — live inference</td></tr>
+  <tr><td>3</td><td>Point at 85% + 6 pillars</td><td>Business at 66% is the problem · technical pillars 97–100%</td></tr>
+  <tr><td>4</td><td>Point at sparklines + history table</td><td>6 sparklines · 8 snapshots Jun 14→Jul 20 · degradation story</td></tr>
+  <tr><td>5</td><td>Click RI-05 RED card</td><td>Real failing rows from Databricks · copy to CSV button</td></tr>
+  <tr><td>6</td><td>Click Run Monitor Agent</td><td>Cards pulse blue · persona-addressed alerts for RED/AMBER KPIs only</td></tr>
+  <tr><td>7</td><td>Click Explain (CS-07)</td><td>Bob reads actual rows · CDC propagation failure pattern</td></tr>
+  <tr><td>8</td><td>Click Generate Fix</td><td>SQL shown · risk LOW · <em>nothing executes yet</em></td></tr>
+  <tr><td>9</td><td>Click Approve &amp; Apply</td><td>SQL runs · CS-07 card glows green · sparkline gains Post-fix point</td></tr>
+  <tr><td>10</td><td>Chat: "What changed after the fix?"</td><td>Bob answers from live data · cited KPI cards pulse blue</td></tr>
+  <tr><td>11</td><td>Chat: "Finance Analyst priority?"</td><td>Persona-tailored: RI-05 / BIZ-02 zero-weight focus</td></tr>
+</table>
+
+<!-- ══════════════════════════════════════════════════════════════════ -->
+<h2>IF THINGS GO WRONG</h2>
+
+<table>
+  <tr><th>Problem</th><th>What to say / do</th></tr>
+  <tr><td>Bob is slow (5–15s)</td><td>"This is a live AI call — real inference, not cached." Stall up to 15s, then continue.</td></tr>
+  <tr><td>Bob fails / fallback text</td><td>"Fallback mode engaged automatically — rule-based alerts and pre-written SQL still complete every step of the flow." No action needed.</td></tr>
+  <tr><td>CS-07 card already GREEN (fix was already applied)</td><td>Run <code>python reset_demo.py</code> before presenting. This reverts the ghost rows, clears all alerts, and removes the Post-fix snapshot.</td></tr>
+  <tr><td>No alerts show after Monitor Agent</td><td>All KPIs may be GREEN if reset wasn't run. Run <code>python reset_demo.py</code> to restore anomalies.</td></tr>
+  <tr><td>Databricks connection error</td><td>SQL warehouse may have paused. Open Databricks UI, start the warehouse, wait 60s, refresh dashboard.</td></tr>
+  <tr><td>"No drill-down query for KPI" error</td><td>RI-03, CP-01, CP-02 have no drill-down. Use CS-07, JI-02, RI-05, CS-02, or RI-01 for the full Explain→Fix flow.</td></tr>
+</table>
+
+<!-- ══════════════════════════════════════════════════════════════════ -->
+<h2>KPI CHEAT SHEET — LIVE VALUES</h2>
+
+<table>
+  <tr><th>KPI</th><th>Name</th><th>Value</th><th>Target</th><th>Status</th><th>Owns it</th></tr>
+  <tr><td>JI-01</td><td>Order-to-Shipment Match Rate</td><td>94%</td><td>≥ 98%</td><td><span class="kpi-tag amber-tag">AMBER</span></td><td>Data Engineer</td></tr>
+  <tr><td>JI-02</td><td>Orphan OS Rate</td><td>2.7%</td><td>≤ 1%</td><td><span class="kpi-tag red-tag">RED</span></td><td>Data Engineer</td></tr>
+  <tr><td>JI-03</td><td>Shipment Execution Match</td><td>100%</td><td>≥ 98%</td><td><span class="kpi-tag green-tag">GREEN</span></td><td>Data Engineer</td></tr>
+  <tr><td>CP-01</td><td>Order GID Null Rate</td><td>0%</td><td>= 0%</td><td><span class="kpi-tag green-tag">GREEN</span></td><td>Data Steward</td></tr>
+  <tr><td>CP-02</td><td>Shipment GID Null Rate</td><td>0%</td><td>= 0%</td><td><span class="kpi-tag green-tag">GREEN</span></td><td>Data Steward</td></tr>
+  <tr><td>CP-05</td><td>Actual Dates Completeness</td><td>1.1%</td><td>≤ 3%</td><td><span class="kpi-tag green-tag">GREEN</span></td><td>Ops Manager</td></tr>
+  <tr><td>CS-07 ★</td><td>Ghost Mapping Rate</td><td>3%</td><td>= 0%</td><td><span class="kpi-tag purple-tag">RED ★ CRITICAL</span></td><td>Data Engineer</td></tr>
+  <tr><td>CS-01</td><td>Weight Mismatch Rate</td><td>0%</td><td>≤ 2%</td><td><span class="kpi-tag green-tag">GREEN</span></td><td>Data Engineer</td></tr>
+  <tr><td>CS-02</td><td>Date Sequence Violation</td><td>0.9%</td><td>= 0%</td><td><span class="kpi-tag red-tag">RED</span></td><td>Ops Manager</td></tr>
+  <tr><td>RI-01</td><td>Invalid Shipment Status</td><td>0.9%</td><td>= 0%</td><td><span class="kpi-tag red-tag">RED</span></td><td>Data Steward</td></tr>
+  <tr><td>RI-05</td><td>Zero / Negative Weight Rate</td><td>6%</td><td>= 0%</td><td><span class="kpi-tag red-tag">RED</span></td><td>Finance Analyst</td></tr>
+  <tr><td>TP-01</td><td>Late Delivery Rate</td><td>0%</td><td>= 0%</td><td><span class="kpi-tag green-tag">GREEN</span></td><td>Logistics Planner</td></tr>
+  <tr><td>BIZ-01</td><td>On-Time Delivery %</td><td>100%</td><td>≥ 95%</td><td><span class="kpi-tag green-tag">GREEN</span></td><td>Supply Chain Mgr</td></tr>
+  <tr><td>BIZ-02</td><td>Zero-Weight Order Rate</td><td>6%</td><td>= 0%</td><td><span class="kpi-tag red-tag">RED</span></td><td>Finance Analyst</td></tr>
+  <tr><td>BIZ-03</td><td>Re-Assignment Rate</td><td>6.2%</td><td>≤ 2%</td><td><span class="kpi-tag red-tag">RED</span></td><td>Supply Chain Mgr</td></tr>
+</table>
+
+<footer>Made with IBM Bob</footer>
+</body>
+</html>
